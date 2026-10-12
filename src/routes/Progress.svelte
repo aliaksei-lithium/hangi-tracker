@@ -7,18 +7,24 @@
   import BarChart from '../lib/ui/BarChart.svelte';
   import LineChart from '../lib/ui/LineChart.svelte';
   import Log from './Log.svelte';
+  import SuggestionCard, { type SuggestionAction } from '../lib/ui/SuggestionCard.svelte';
+  import type { Suggestion } from '../lib/domain/suggest';
 
   // Everything here comes from the log and the plan; nothing needs input.
   let {
     plan,
     planned,
     log,
+    suggestions,
+    onSuggestion,
     onOpen,
     onAdd,
   }: {
     plan: Plan;
     planned: PlannedSession[];
     log: HangSession[];
+    suggestions: Suggestion[];
+    onSuggestion: (s: Suggestion, a: SuggestionAction) => void;
     onOpen: (id: string) => void;
     onAdd: () => void;
   } = $props();
@@ -57,6 +63,10 @@
 
 <div class="content">
   <h1 class="display">Progress</h1>
+
+  {#each suggestions as s (s.key)}
+    <SuggestionCard suggestion={s} onAction={(a) => onSuggestion(s, a)} />
+  {/each}
 
   {#if log.length === 0}
     <p class="muted">Charts and records fill in on their own after your first session.</p>

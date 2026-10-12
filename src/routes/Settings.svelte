@@ -103,6 +103,24 @@
   </section>
 
   <section>
+    <h2 class="eyebrow">Progression rules</h2>
+    <div class="rows">
+      <div class="row">
+        <span class="text"><span>Suggestions</span><span class="sub">Smaller edge, step back, back after a break</span></span>
+        <Switch bind:checked={draft.rules.suggestions} label="Suggestions" />
+      </div>
+      <div class="row">
+        <span class="text"><span>Pain threshold</span><span class="sub">Pain above this suggests a step back</span></span>
+        <div class="step"><Stepper label="Pain threshold" bind:value={draft.rules.painThreshold} min={0} max={9} format={(v) => `${v} / 10`} /></div>
+      </div>
+      <div class="row">
+        <span class="text"><span>Break</span><span class="sub">After this many days, go back one week (0 = off)</span></span>
+        <div class="step"><Stepper label="Break days" bind:value={draft.rules.breakDays} min={0} max={60} format={(v) => (v ? `${v} days` : 'Off')} /></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
     <h2 class="eyebrow">Saving edits on the preview</h2>
     <div class="options" role="radiogroup" aria-label="Saving edits on the preview">
       {#each SCOPES as s (s.label)}

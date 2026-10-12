@@ -26,12 +26,20 @@ export interface PlannedSession {
   warmup: boolean;
   sets: SetSpec[];
   status: PlannedStatus;
+  /**
+   * The plan's own sets after an accepted suggestion changed them. "Reset to plan"
+   * returns to these; without them it returns to the protocol.
+   */
+  baseSets?: SetSpec[];
+  baseWarmup?: boolean;
 }
 
 export interface Plan {
   id: string;
   startDate: string; // date of the first full session
   weeks: number;
+  /** Suggestions the user dismissed or accepted, so they do not come back. */
+  handled?: string[];
 }
 
 /** One row of a progression table: from week `fromWeek` on, until the next row. */
@@ -73,6 +81,11 @@ export interface Settings {
   rules: {
     /** null = ask every time. */
     editScope: EditScope | null;
+    suggestions: boolean;
+    /** Pain above this level (0-10) suggests a step back. */
+    painThreshold: number;
+    /** A break longer than this many days suggests going back one week; 0 turns it off. */
+    breakDays: number;
   };
 }
 

@@ -7,6 +7,8 @@
   import { Store, type Snapshot } from './lib/store/db';
   import { DocError, parseDoc, toDoc } from './lib/store/doc';
   import { Sync, type SyncStatus } from './lib/store/sync';
+  import { findSuggestions, moveToEdge, restartAfterBreak, skipNext, stepBack, type Suggestion } from './lib/domain/suggest';
+  import type { SuggestionAction } from './lib/ui/SuggestionCard.svelte';
   import EntryEditor from './routes/EntryEditor.svelte';
   import Home from './routes/Home.svelte';
   import Progress from './routes/Progress.svelte';
@@ -115,7 +117,7 @@
     const changed = after.filter((s, i) => s !== before[i]);
     await store.saveSessions(changed);
     data.sessions = after;
-    if (remember) await changeSettings({ ...$state.snapshot(data.settings), rules: { editScope: scope } });
+    if (remember) await changeSettings({ ...$state.snapshot(data.settings), rules: { ...$state.snapshot(data.settings.rules), editScope: scope } });
   }
 
   async function resetSession(id: string) {
@@ -192,6 +194,30 @@
     data.hangSessions = data.hangSessions.filter((s) => s.id !== entry.id);
     data.sessions = data.sessions.map((s) => planned.find((p) => p.id === s.id) ?? s);
     view = { name: 'log' };
+  }
+
+  // ---- suggestions ----
+
+  const suggestions = $derived(
+    data ? findSuggestions(data.plan, data.sessions, data.hangSessions, data.settings, toIsoDate(new Date())) : [],
+  );
+
+  async function onSuggestion(s: Suggestion, action: SuggestionAction) {
+    if (!data || !store) return;
+    const before = $state.snapshot(data.sessions);
+    const settings = $state.snapshot(data.settings);
+    const newId = (type: string) => `${data!.plan.id}:x${crypto.randomUUID().slice(0, 6)}:${type}`;
+    let after = before;
+    if (action === 'accept' && s.kind === 'edge' && s.edgeMm) after = moveToEdge(before, settings, s.edgeMm);
+    else if (action === 'accept' && s.kind === 'break') after = restartAfterBreak(before, settings, toIsoDate(new Date()), newId);
+    else if (action === 'repeat') after = stepBack(before, settings, newId);
+    else if (action === 'skip') after = skipNext(before);
+    const changed = after.filter((x) => !before.includes(x));
+    if (changed.length) await store.saveSessions(changed);
+    data.sessions = after;
+    const plan = { ...$state.snapshot(data.plan), handled: [...(data.plan.handled ?? []), s.key] };
+    await store.savePlan(plan);
+    data.plan = plan;
   }
 
   // ---- settings and data ----
@@ -330,7 +356,7 @@
         onReset={resetData}
       />
     {:else if view.name === 'log'}
-      <Progress plan={data.plan} planned={data.sessions} log={data.hangSessions} onOpen={openEntry} onAdd={openNewEntry} />
+      <Progress plan={data.plan} planned={data.sessions} log={data.hangSessions} {suggestions} {onSuggestion} onOpen={openEntry} onAdd={openNewEntry} />
     {:else}
       <Home
         {user}
@@ -338,6 +364,8 @@
         sessions={data.sessions}
         hangSessions={data.hangSessions}
         settings={data.settings}
+        suggestion={suggestions[0] ?? null}
+        {onSuggestion}
         onOpen={(id) => (view = { name: 'preview', id })}
       />
     {/if}

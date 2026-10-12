@@ -104,6 +104,11 @@ export class Store {
     await this.changed();
   }
 
+  async savePlan(plan: Plan): Promise<void> {
+    await this.db.put('plan', plan, CURRENT);
+    await this.changed();
+  }
+
   async saveSettings(settings: Settings): Promise<void> {
     await this.db.put('settings', settings, CURRENT);
     await this.changed();

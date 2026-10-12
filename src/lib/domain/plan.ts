@@ -45,7 +45,7 @@ export function defaultSettings(): Settings {
     },
     schedule: { fullDay: 1, lightDay: 4, minGapHours: 48 },
     timer: { countdownSec: 10, prepareSec: 5, beeps: true, voice: true, wakeLock: true },
-    rules: { editScope: null },
+    rules: { editScope: null, suggestions: true, painThreshold: 3, breakDays: 10 },
   };
 }
 
@@ -64,7 +64,7 @@ export function withDefaults(saved: Partial<Settings> | undefined): Settings {
   };
 }
 
-function stepForWeek(steps: ProgressionStep[], week: number): ProgressionStep {
+export function stepForWeek(steps: ProgressionStep[], week: number): ProgressionStep {
   let current = steps[0];
   for (const s of steps) if (s.fromWeek <= week) current = s;
   return current;
@@ -288,12 +288,17 @@ export function saveEdit(
   });
 }
 
-/** The session as the protocol defines it, dropping all edits. */
+/** The plan's sets for a session: after an accepted suggestion, or from the protocol. */
+export function baseSetsOf(session: PlannedSession, settings: Settings): SetSpec[] {
+  return session.baseSets ?? planSets(settings, session.type, session.week);
+}
+
+/** The session as the plan defines it, dropping all edits. */
 export function resetToPlan(session: PlannedSession, settings: Settings): PlannedSession {
   return {
     ...session,
-    warmup: settings.protocol.warmupOn,
-    sets: planSets(settings, session.type, session.week),
+    warmup: session.baseWarmup ?? settings.protocol.warmupOn,
+    sets: baseSetsOf(session, settings).map((s) => ({ ...s })),
     status: session.status === 'done' ? 'done' : 'planned',
   };
 }

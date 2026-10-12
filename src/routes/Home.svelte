@@ -5,6 +5,8 @@
   import type { HangSession, Plan, PlannedSession, Settings } from '../lib/domain/types';
   import { greeting } from '../lib/greeting';
   import Frame from '../lib/ui/Frame.svelte';
+  import SuggestionCard, { type SuggestionAction } from '../lib/ui/SuggestionCard.svelte';
+  import type { Suggestion } from '../lib/domain/suggest';
   import { typeLabel } from '../lib/format';
 
   let {
@@ -13,6 +15,8 @@
     sessions,
     hangSessions,
     settings,
+    suggestion,
+    onSuggestion,
     onOpen,
   }: {
     user: User;
@@ -20,6 +24,8 @@
     sessions: PlannedSession[];
     hangSessions: HangSession[];
     settings: Settings;
+    suggestion: Suggestion | null;
+    onSuggestion: (s: Suggestion, a: SuggestionAction) => void;
     onOpen: (id: string) => void;
   } = $props();
 
@@ -65,6 +71,10 @@
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M12 3l10 18H2z"></path><path d="M12 10v4M12 17h.01"></path></svg>
       <span><strong>Last session was {soon === 0 ? 'less than an hour' : soon === 1 ? '1 hour' : `${soon} hours`} ago.</strong> Leave at least {settings.schedule.minGapHours} hours between sessions.</span>
     </div>
+  {/if}
+
+  {#if suggestion}
+    <SuggestionCard {suggestion} onAction={(a) => onSuggestion(suggestion, a)} />
   {/if}
 
   {#if next}

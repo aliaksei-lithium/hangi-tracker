@@ -1,6 +1,6 @@
 // Session log rules: manual entries, edits and deletes, and how they mark the plan.
 
-import { planSets } from './plan';
+import { baseSetsOf } from './plan';
 import type { HangSession, PlannedSession, Settings } from './types';
 
 /** A manual entry prefilled from a planned session (or empty sets when there is none). */
@@ -28,7 +28,7 @@ export function newEntry(planned: PlannedSession | null, datetime: string, id: s
 
 /** Status of a planned session that no longer has a log entry. */
 export function reopened(p: PlannedSession, settings: Settings): PlannedSession {
-  const asPlanned = JSON.stringify(p.sets) === JSON.stringify(planSets(settings, p.type, p.week));
+  const asPlanned = JSON.stringify(p.sets) === JSON.stringify(baseSetsOf(p, settings));
   return { ...p, status: asPlanned ? 'planned' : 'modified' };
 }
 
