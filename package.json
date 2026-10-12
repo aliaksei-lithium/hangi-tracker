@@ -1,0 +1,28 @@
+{
+  "name": "hangi-tracker",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "dev:worker": "wrangler dev",
+    "build": "vite build",
+    "preview": "npm run build && wrangler dev",
+    "lint": "svelte-check --tsconfig ./tsconfig.app.json --fail-on-warnings --threshold warning",
+    "typecheck": "svelte-check --tsconfig ./tsconfig.app.json && tsc -p tsconfig.node.json && tsc -p tsconfig.worker.json",
+    "test": "vitest run",
+    "types:worker": "wrangler types worker/worker-configuration.d.ts",
+    "deploy": "npm run build && wrangler deploy"
+  },
+  "devDependencies": {
+    "@sveltejs/vite-plugin-svelte": "^7.3.1",
+    "@tsconfig/svelte": "^5.0.8",
+    "@types/node": "^26.6.5",
+    "svelte": "^5.57.2",
+    "svelte-check": "^4.7.6",
+    "typescript": "~6.0.2",
+    "vite": "^8.3.4",
+    "vitest": "^4.1.11",
+    "wrangler": "^4.149.0"
+  }
+}

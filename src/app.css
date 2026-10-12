@@ -1,0 +1,144 @@
+/* Hangi Tracker — app styles. Tokens copied from docs/design/tokens.css (keep in sync). Derived from the Industry system (steel accent, hairline frames, Barlow Condensed display).
+   Usage: :root = light, [data-theme="dark"] = dark, prefers-color-scheme handles "system". Timer always uses the --timer-* and --ph-* set. */
+@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&display=swap');
+
+:root {
+  /* colour — light */
+  --bg: #f2f2f3;
+  --surface: #f8f8f9;          /* raised rows, sheets */
+  --surface-2: #e7e7ea;        /* stepper wells, chips */
+  --text: #1d1f20;             /* 15.6:1 on --bg */
+  --muted: #5d5d60;            /* 6.0:1 on --bg */
+  --divider: rgba(29, 31, 32, .16);
+  --mark: rgba(29, 31, 32, .55);  /* registration "+" corners */
+  --accent: #416180;           /* Industry accent-700: 6.1:1 on --bg, fills primary buttons */
+  --accent-hover: #2c455d;
+  --accent-tint: #d6ebff;
+  --on-accent: #f8f8f9;
+  --danger: #a3261c;           /* 6.6:1 on --bg */
+  --danger-tint: #fbe9e6;
+  --warning: #6b4a00;          /* text on --warning-tint, 8.1:1 */
+  --warning-tint: #fbf0d4;
+  --success: #2f6b3a;
+  --bg-graphic: url('assets/bg-topo-light.svg');
+
+  /* timer — always dark, independent of app theme */
+  --timer-bg: #0e0f10;
+  --timer-text: #f4f6f8;       /* 18.9:1 on --timer-bg */
+  --timer-muted: #a9adb2;      /* 8.4:1 on --timer-bg */
+  --timer-control: #1b1d20;
+  --timer-control-text: #f4f6f8;
+  --ph-ready: oklch(0.76 0.15 70);   --on-ready: #111213;  /* amber, mid lightness — 8.8:1 */
+  --ph-hang:  oklch(0.93 0.15 125);  --on-hang:  #111213;  /* chartreuse, lightest — 15:1 */
+  --ph-rest:  oklch(0.34 0.08 250);  --on-rest:  #f4f6f8;  /* deep steel, darkest — 11:1 */
+
+  /* type — system stack for UI, Barlow Condensed for display + timer digits (tabular) */
+  --font-ui: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, "Helvetica Neue", Arial, sans-serif;
+  --font-display: "Barlow Condensed", var(--font-ui);
+  --fs-xs: 12px; --fs-sm: 14px; --fs-md: 16px; --fs-lg: 20px; --fs-xl: 26px; --fs-2xl: 34px;
+  --fs-timer: 176px;           /* main digits, 2 m reading distance */
+  --fs-phase: 56px;            /* phase word */
+  --lh-tight: 1.1; --lh-body: 1.45;
+
+  /* spacing — 4 pt base */
+  --sp-1: 4px; --sp-2: 8px; --sp-3: 12px; --sp-4: 16px; --sp-5: 20px; --sp-6: 24px; --sp-8: 32px; --sp-10: 40px; --sp-12: 48px;
+
+  /* radii — Industry keeps frames square; controls get a hairline softening only */
+  --r-0: 0; --r-1: 2px; --r-pill: 999px;
+
+  /* sizes */
+  --hit: 48px; --hit-timer: 72px; --btn-h: 56px;
+
+  /* elevation — only sheets, dialogs and the fixed Start bar */
+  --shadow-1: 0 1px 2px rgba(43, 43, 45, .14);
+  --shadow-2: 0 -4px 16px rgba(43, 43, 45, .10);
+  --shadow-3: 0 12px 32px rgba(43, 43, 45, .22);
+}
+
+[data-theme="dark"] {
+  --bg: #141618;
+  --surface: #1c1f22;
+  --surface-2: #26292d;
+  --text: #e8e9ea;             /* 14.9:1 */
+  --muted: #a0a3a7;            /* 7.3:1 */
+  --divider: rgba(232, 233, 234, .14);
+  --mark: rgba(232, 233, 234, .5);
+  --accent: #94bce3;           /* Industry accent-400: 9.0:1 */
+  --accent-hover: #b5d9fd;
+  --accent-tint: #1d2d3d;
+  --on-accent: #10202e;
+  --danger: #f08a7e;
+  --danger-tint: #3a1d1a;
+  --warning: #f2cf7a;
+  --warning-tint: #33290f;
+  --success: #8fd19b;
+  --bg-graphic: url('assets/bg-topo-dark.svg');
+  --shadow-1: 0 0 0 1px rgba(255, 255, 255, .06);
+  --shadow-2: 0 -1px 0 rgba(255, 255, 255, .08);
+  --shadow-3: 0 0 0 1px rgba(255, 255, 255, .08), 0 16px 40px rgba(0, 0, 0, .6);
+}
+
+@media (prefers-color-scheme: dark) {
+  /* "system" theme: same values as [data-theme="dark"] above. Keep the two blocks in sync. */
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #141618;
+    --surface: #1c1f22;
+    --surface-2: #26292d;
+    --text: #e8e9ea;             /* 14.9:1 */
+    --muted: #a0a3a7;            /* 7.3:1 */
+    --divider: rgba(232, 233, 234, .14);
+    --mark: rgba(232, 233, 234, .5);
+    --accent: #94bce3;           /* Industry accent-400: 9.0:1 */
+    --accent-hover: #b5d9fd;
+    --accent-tint: #1d2d3d;
+    --on-accent: #10202e;
+    --danger: #f08a7e;
+    --danger-tint: #3a1d1a;
+    --warning: #f2cf7a;
+    --warning-tint: #33290f;
+    --success: #8fd19b;
+    --bg-graphic: url('assets/bg-topo-dark.svg');
+    --shadow-1: 0 0 0 1px rgba(255, 255, 255, .06);
+    --shadow-2: 0 -1px 0 rgba(255, 255, 255, .08);
+    --shadow-3: 0 0 0 1px rgba(255, 255, 255, .08), 0 16px 40px rgba(0, 0, 0, .6);
+  }
+}
+
+/* ---- base ---- */
+[data-theme="dark"] { color-scheme: dark; }
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-ui);
+  font-size: var(--fs-md);
+  line-height: var(--lh-body);
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+}
+#app { min-height: 100%; min-height: 100dvh; display: flex; flex-direction: column; max-width: 560px; margin: 0 auto; }
+button, input { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.display { font-family: var(--font-display); font-weight: 600; line-height: var(--lh-tight); }
+.eyebrow { font-size: var(--fs-xs); letter-spacing: .1em; text-transform: uppercase; font-weight: 600; color: var(--muted); }
+
+.btn {
+  height: var(--btn-h);
+  display: flex; align-items: center; justify-content: center; gap: var(--sp-2);
+  border: 1px solid transparent; border-radius: var(--r-1);
+  font-family: var(--font-display); font-weight: 600; font-size: 22px; letter-spacing: .02em;
+  padding: 0 var(--sp-4);
+}
+.btn-primary { background: var(--accent); color: var(--on-accent); }
+.btn-primary:hover:not(:disabled) { background: var(--accent-hover); }
+.btn-secondary { background: transparent; border-color: var(--divider); font-size: 20px; }
+.btn:disabled { opacity: .5; cursor: default; }
+
+.notice { display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px; font-size: 15px; line-height: 1.4; }
+.notice svg { flex: none; margin-top: 1px; }
+.notice-danger { background: var(--danger-tint); color: var(--danger); }
+.notice-warning { background: var(--warning-tint); color: var(--warning); }

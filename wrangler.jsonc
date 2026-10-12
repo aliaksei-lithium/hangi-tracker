@@ -1,0 +1,23 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "hangi-tracker",
+  "main": "worker/index.ts",
+  "compatibility_date": "2026-10-01",
+  "observability": { "enabled": true },
+  "assets": {
+    "directory": "dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*"]
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "hangi-tracker",
+      "database_id": "4a346550-83b6-4432-8e56-2c17f3d6212d",
+      "migrations_dir": "migrations"
+    }
+  ]
+  // Secret, not in this file: SESSION_SECRET (wrangler secret put SESSION_SECRET).
+  // For local dev put it in .dev.vars.
+}
