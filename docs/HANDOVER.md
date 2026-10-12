@@ -2,18 +2,25 @@
 
 ## Status on 2026-10-13 (overnight session, run locally)
 
-Done and pushed:
-- Phase 0: Vite + Svelte + TS app, Worker with `/api/health`, `wrangler.jsonc`, CI (green).
-- Phase 1: D1 migrations, password-only login, session cookie, `scripts/add_user.py`,
-  Login, Home greeting, Settings placeholder with Log out. Tested end to end on a local
-  Worker (`npm run preview`).
-- Phase 2: plan generator with tests, IndexedDB store, real next-session card, preview
-  with full editing, scope sheet, Reset to plan, 48 h warning.
-- The two open decisions were taken with the design defaults: password-only login,
-  square corners. Change either if you want.
-- D1 database `hangi-tracker` is created in the account (id in `wrangler.jsonc`).
+All code is on `claude/charming-babbage-9duklt`, CI green, 87 unit tests.
 
-Waiting for the owner (the session was not allowed to run production deploys):
+| Phase | State |
+| --- | --- |
+| 0 Scaffold | Done. Vite + Svelte 5 + TS, Worker, `wrangler.jsonc`, CI. |
+| 1 Login and greeting | Done. Password-only login, signed cookie, `scripts/add_user.py`, greeting. |
+| 2 Plan and preview | Done. Generator, IndexedDB, next-session card, preview editing, scope sheet, reset, 48 h warning. |
+| 3 Timer | Done in the browser. Not yet tested on a real phone with the screen locked. |
+| 4 Log and sync | Done. Log with add/edit/delete, D1 snapshot sync with conflict choice, export/import, PWA shell. Service worker not tested (the test browser blocks it). |
+| 5 Progress | Done. Records, charts, calendar, plan vs actual, week table. |
+| 6 Suggestions | Done. Smaller edge, step back, back after a break, pain threshold. |
+| 7 Settings and polish | Partly. Done: timer, warm-up, schedule, rules, theme, data, back gesture. Open: Russian, kg/lb, install prompt, Playwright smoke test, accessibility pass. |
+
+Decisions taken without the owner (change any of them):
+- Password-only login and square corners (the design defaults).
+- Middle values where the doc gives ranges (see PLAN.md 5a).
+- Edge and hang time are two small charts, not one chart with two scales.
+
+Not deployed yet. The session was not allowed to run production commands. Run:
 
 ```
 npx wrangler d1 migrations apply hangi-tracker --remote
@@ -24,6 +31,9 @@ python3 scripts/add_user.py        # then run the printed command
 
 Then open the `workers.dev` URL that `npm run deploy` prints and log in. After the first
 real login, check the Worker logs for CPU-limit errors (see PLAN.md, risks).
+
+Test on the phone first: a full session with the screen locked (beeps), add to home
+screen, and open once in airplane mode.
 
 ---
 

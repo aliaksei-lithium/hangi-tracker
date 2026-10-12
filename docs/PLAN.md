@@ -173,6 +173,17 @@ product: log in, be greeted, run a session.
   shape; edge, rest, grip and weight carry as the value. A change to one set stays local.
 - A missed session stays the next session (marked overdue) until it is done or skipped.
 - Lint is `svelte-check --fail-on-warnings` (no ESLint, fewer dependencies).
+- Phase 3: the start countdown, prepare and warm-up rest are settings; prepare is
+  taken from the end of the rest. Beeps for the whole session are scheduled on the
+  Web Audio clock and rescheduled after pause, +10 s and skip.
+- Phase 4: the log lives under the Progress tab. A log entry can link to one planned
+  session; saving marks it done, deleting opens it again.
+- Phase 5: edge and hang time are two charts (the design had one chart with two
+  y-scales). Two-series colours were checked with a palette validator.
+- Phase 6: a planned session stores its plan values after an accepted suggestion
+  (`baseSets`), so "Reset to plan" keeps the suggestion. Handled suggestions are kept
+  in `plan.handled`. "Repeat last week" adds one week at the end.
+- Phase 7: sub-screens use browser history for the back gesture.
 
 ## 6. Setup checklist (one-time, by the owner)
 
