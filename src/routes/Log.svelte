@@ -17,10 +17,9 @@
   }
 </script>
 
-<!-- Phase 5 adds the progress views above this log. -->
 <div class="content">
   <div class="titlebar">
-    <h1 class="display">Log</h1>
+    <h2 class="display">Log</h2>
     <button class="link" onclick={onAdd}>
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>
       Add past session
@@ -45,9 +44,9 @@
 </div>
 
 <style>
-  .content { padding: var(--sp-6) var(--sp-5); display: flex; flex-direction: column; gap: var(--sp-4); }
+  .content { display: flex; flex-direction: column; gap: var(--sp-4); }
   .titlebar { display: flex; align-items: center; justify-content: space-between; }
-  h1 { margin: 0; font-size: var(--fs-2xl); }
+  h2 { margin: 0; font-size: var(--fs-xl); }
   .link { min-height: 48px; display: inline-flex; align-items: center; gap: 6px; border: 0; background: transparent; color: var(--accent); font-weight: 600; font-size: 15px; padding: 0; }
   .list { display: flex; flex-direction: column; border-top: 1px solid var(--divider); }
   .item { min-height: 64px; display: flex; flex-direction: column; justify-content: center; gap: 2px; border: 0; border-bottom: 1px solid var(--divider); background: transparent; text-align: left; padding: 8px 0; }

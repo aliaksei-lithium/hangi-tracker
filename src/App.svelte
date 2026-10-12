@@ -9,7 +9,7 @@
   import { Sync, type SyncStatus } from './lib/store/sync';
   import EntryEditor from './routes/EntryEditor.svelte';
   import Home from './routes/Home.svelte';
-  import Log from './routes/Log.svelte';
+  import Progress from './routes/Progress.svelte';
   import Login from './routes/Login.svelte';
   import Preview from './routes/Preview.svelte';
   import SettingsView from './routes/Settings.svelte';
@@ -330,7 +330,7 @@
         onReset={resetData}
       />
     {:else if view.name === 'log'}
-      <Log log={data.hangSessions} onOpen={openEntry} onAdd={openNewEntry} />
+      <Progress plan={data.plan} planned={data.sessions} log={data.hangSessions} onOpen={openEntry} onAdd={openNewEntry} />
     {:else}
       <Home
         {user}

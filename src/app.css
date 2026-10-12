@@ -21,6 +21,9 @@
   --warning-tint: #fbf0d4;
   --success: #2f6b3a;
   --bg-graphic: url('assets/bg-topo-light.svg');
+  /* chart series for two-series charts; single-series charts use --accent */
+  --series-1: #2a78d6;
+  --series-2: #eb6834;
 
   /* timer — always dark, independent of app theme */
   --timer-bg: #0e0f10;
@@ -73,6 +76,8 @@
   --warning-tint: #33290f;
   --success: #8fd19b;
   --bg-graphic: url('assets/bg-topo-dark.svg');
+  --series-1: #3987e5;
+  --series-2: #d95926;
   --shadow-1: 0 0 0 1px rgba(255, 255, 255, .06);
   --shadow-2: 0 -1px 0 rgba(255, 255, 255, .08);
   --shadow-3: 0 0 0 1px rgba(255, 255, 255, .08), 0 16px 40px rgba(0, 0, 0, .6);
@@ -99,6 +104,8 @@
     --warning-tint: #33290f;
     --success: #8fd19b;
     --bg-graphic: url('assets/bg-topo-dark.svg');
+    --series-1: #3987e5;
+    --series-2: #d95926;
     --shadow-1: 0 0 0 1px rgba(255, 255, 255, .06);
     --shadow-2: 0 -1px 0 rgba(255, 255, 255, .08);
     --shadow-3: 0 0 0 1px rgba(255, 255, 255, .08), 0 16px 40px rgba(0, 0, 0, .6);
