@@ -81,7 +81,10 @@ Phone (PWA)                                  Cloudflare
   16-byte salt. The same algorithm is available in Python's `hashlib` and in
   WebCrypto on Workers, so the script and the Worker agree.
 - `POST /api/login` with `{name, password}` verifies the hash (constant-time
-  compare) and sets an `HttpOnly; Secure; SameSite=Lax` cookie. The cookie value
+  compare). Note: the design chat later chose a password-only login; see
+  `docs/HANDOVER.md`. If confirmed, the body is `{password}` and the Worker
+  checks it against every user's hash; the table keeps `name` for later.
+  It and sets an `HttpOnly; Secure; SameSite=Lax` cookie. The cookie value
   is `userId.expiry.signature`, signed with HMAC-SHA256 and `SESSION_SECRET`.
   No session table. Lifetime 90 days.
 - `GET /api/me` returns `{name, displayName}`. `POST /api/logout` clears the cookie.
@@ -156,7 +159,7 @@ product: log in, be greeted, run a session.
 | 5 | Progress views | Week table, three SVG charts, personal records, calendar, plan vs actual. | Views fill from the log without input. |
 | 6 | Suggestions and safety | Smaller-edge, step-back and missed-weeks rules with Accept and Dismiss; pain threshold; safety message; plan regeneration. | Acceptance criterion 6. |
 | 7 | Settings and polish | All settings groups, units, theme, Russian and English, PWA install prompt, accessibility pass, Playwright smoke test. | Installable, offline, readable at 2 m. |
-| D | Design integration | Tokens, components and screens from the Design Agent (see `docs/DESIGN_PROMPT.md`). Starts in parallel with phase 2 and lands by phase 7. | Screens match the approved design. |
+| D | Design integration | Tokens, components and screens from the design handoff in `docs/design/` (see its README). `tokens.css` becomes the app's CSS base in phase 0; screens are rebuilt in Svelte as each phase reaches them. | Screens match the design board. |
 
 ## 6. Setup checklist (one-time, by the owner)
 
