@@ -3,7 +3,8 @@
   import { player } from '../lib/audio/player';
   import type { User } from '../lib/api';
   import { formatDuration } from '../lib/domain/plan';
-  import type { EditScope, Settings } from '../lib/domain/types';
+  import { WEEKDAY_NAMES } from '../lib/domain/dates';
+  import { EDGES_MM, type EditScope, type Settings } from '../lib/domain/types';
   import Stepper from '../lib/ui/Stepper.svelte';
   import Switch from '../lib/ui/Switch.svelte';
 
@@ -57,6 +58,14 @@
     { value: 'all', label: 'This and all next sessions' },
   ];
 
+  // Monday first, like the calendar.
+  const DAYS = [1, 2, 3, 4, 5, 6, 0];
+  const THEMES = [
+    { value: 'system', label: 'System' },
+    { value: 'light', label: 'Light' },
+    { value: 'dark', label: 'Dark' },
+  ] as const;
+
   const TOGGLES = [
     { key: 'beeps', label: 'Beeps', sub: '3-2-1 before each hang, start and end of hang' },
     { key: 'voice', label: 'Voice prompts', sub: '“Get ready”, “Hang”, “Rest”, “Next set”' },
@@ -79,10 +88,6 @@
         <span class="text"><span>Get ready</span><span class="sub">Before each set, taken from the rest</span></span>
         <div class="step"><Stepper label="Get ready" bind:value={draft.timer.prepareSec} min={0} max={15} format={(v) => `${v} s`} /></div>
       </div>
-      <div class="row">
-        <span class="text"><span>Warm-up rest</span><span class="sub">Between warm-up hangs</span></span>
-        <div class="step"><Stepper label="Warm-up rest" bind:value={draft.protocol.warmup.restSec} step={15} min={15} max={300} format={formatDuration} /></div>
-      </div>
     </div>
     <div class="rows">
       {#each TOGGLES as t (t.key)}
@@ -100,6 +105,53 @@
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M4 9v6h4l5 4V5L8 9z"></path><path d="M16 9a4 4 0 0 1 0 6"></path></svg>
       Play test signals
     </button>
+  </section>
+
+  <section>
+    <h2 class="eyebrow">Warm-up</h2>
+    <div class="rows">
+      <div class="row">
+        <span class="text"><span>Edge</span></span>
+        <select class="select" aria-label="Warm-up edge" bind:value={draft.protocol.warmup.edgeMm}>
+          {#each EDGES_MM as e (e)}<option value={e}>{e} mm</option>{/each}
+        </select>
+      </div>
+      <div class="row">
+        <span class="text"><span>Hang</span></span>
+        <div class="step"><Stepper label="Warm-up hang" bind:value={draft.protocol.warmup.hangSec} min={3} max={30} format={(v) => `${v} s`} /></div>
+      </div>
+      <div class="row">
+        <span class="text"><span>Sets</span></span>
+        <div class="step"><Stepper label="Warm-up sets" bind:value={draft.protocol.warmup.sets} min={1} max={6} /></div>
+      </div>
+      <div class="row">
+        <span class="text"><span>Rest</span><span class="sub">Between warm-up hangs</span></span>
+        <div class="step"><Stepper label="Warm-up rest" bind:value={draft.protocol.warmup.restSec} step={15} min={15} max={300} format={formatDuration} /></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2 class="eyebrow">Schedule</h2>
+    <div class="rows">
+      <div class="row">
+        <span class="text"><span>Full session</span></span>
+        <select class="select" aria-label="Full session day" bind:value={draft.schedule.fullDay}>
+          {#each DAYS as d (d)}<option value={d} disabled={d === draft.schedule.lightDay}>{WEEKDAY_NAMES[d]}</option>{/each}
+        </select>
+      </div>
+      <div class="row">
+        <span class="text"><span>Light session</span></span>
+        <select class="select" aria-label="Light session day" bind:value={draft.schedule.lightDay}>
+          {#each DAYS as d (d)}<option value={d} disabled={d === draft.schedule.fullDay}>{WEEKDAY_NAMES[d]}</option>{/each}
+        </select>
+      </div>
+      <div class="row">
+        <span class="text"><span>Minimum gap</span><span class="sub">A warning, not a block</span></span>
+        <div class="step"><Stepper label="Minimum gap" bind:value={draft.schedule.minGapHours} step={12} min={24} max={96} format={(v) => `${v} h`} /></div>
+      </div>
+    </div>
+    <p class="muted small">Changing the days moves the open sessions to the new days, from today.</p>
   </section>
 
   <section>
@@ -128,6 +180,15 @@
           <input type="radio" name="scope" checked={draft.rules.editScope === s.value} onchange={() => (draft.rules.editScope = s.value)} />
           <span>{s.label}</span>
         </label>
+      {/each}
+    </div>
+  </section>
+
+  <section>
+    <h2 class="eyebrow">Theme</h2>
+    <div class="segmented" role="radiogroup" aria-label="Theme">
+      {#each THEMES as t (t.value)}
+        <button role="radio" aria-checked={draft.general.theme === t.value} class:sel={draft.general.theme === t.value} onclick={() => (draft.general.theme = t.value)}>{t.label}</button>
       {/each}
     </div>
   </section>
@@ -206,6 +267,11 @@
   /* The row text already names the stepper. */
   .step :global(.label) { display: none; }
   .test { height: 52px; font-size: 20px; }
+  .select { height: 48px; min-width: 140px; padding: 0 10px; background: var(--surface); border: 1px solid var(--divider); border-radius: var(--r-1); font: inherit; font-size: 15px; color: var(--text); }
+  .segmented { display: grid; grid-template-columns: repeat(3, 1fr); border: 1px solid var(--divider); }
+  .segmented button { height: 48px; border: 0; background: transparent; font-size: 15px; }
+  .segmented button + button { border-left: 1px solid var(--divider); }
+  .segmented .sel { background: var(--accent); color: var(--on-accent); font-weight: 600; }
   .options { display: flex; flex-direction: column; border: 1px solid var(--divider); }
   .option { min-height: 52px; display: flex; align-items: center; gap: 14px; padding: 8px 14px; cursor: pointer; }
   .option + .option { border-top: 1px solid var(--divider); }

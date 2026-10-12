@@ -1,13 +1,13 @@
 <script lang="ts">
   import { fetchMe, logout, NetworkError, type User } from './lib/api';
-  import { toIsoDate } from './lib/domain/dates';
+  import { addDays, toIsoDate } from './lib/domain/dates';
   import { newEntry, plannedChangesOnDelete, plannedChangesOnSave } from './lib/domain/log';
   import { nextSession, resetToPlan, saveEdit } from './lib/domain/plan';
   import type { EditScope, HangSession, PlannedSession, Settings } from './lib/domain/types';
   import { Store, type Snapshot } from './lib/store/db';
   import { DocError, parseDoc, toDoc } from './lib/store/doc';
   import { Sync, type SyncStatus } from './lib/store/sync';
-  import { findSuggestions, moveToEdge, restartAfterBreak, skipNext, stepBack, type Suggestion } from './lib/domain/suggest';
+  import { findSuggestions, moveToEdge, redate, restartAfterBreak, skipNext, stepBack, type Suggestion } from './lib/domain/suggest';
   import type { SuggestionAction } from './lib/ui/SuggestionCard.svelte';
   import EntryEditor from './routes/EntryEditor.svelte';
   import Home from './routes/Home.svelte';
@@ -154,7 +154,7 @@
     await store.saveHangSession(session, [done]);
     data.hangSessions = [...data.hangSessions, session];
     data.sessions = data.sessions.map((s) => (s.id === done.id ? done : s));
-    view = { name: 'summary', id: session.id };
+    go({ name: 'summary', id: session.id });
     void sync?.flush();
   }
 
@@ -169,12 +169,12 @@
     const next = nextSession($state.snapshot(data.sessions));
     const now = new Date();
     now.setMinutes(0, 0, 0);
-    view = { name: 'entry', entry: newEntry(next, now.toISOString(), crypto.randomUUID()), isNew: true };
+    go({ name: 'entry', entry: newEntry(next, now.toISOString(), crypto.randomUUID()), isNew: true });
   }
 
   function openEntry(id: string) {
     const e = data?.hangSessions.find((s) => s.id === id);
-    if (e) view = { name: 'entry', entry: $state.snapshot(e), isNew: false };
+    if (e) go({ name: 'entry', entry: $state.snapshot(e), isNew: false });
   }
 
   async function saveEntry(entry: HangSession) {
@@ -184,7 +184,7 @@
     await store.saveHangSession(entry, planned);
     data.hangSessions = previous ? data.hangSessions.map((s) => (s.id === entry.id ? entry : s)) : [...data.hangSessions, entry];
     data.sessions = data.sessions.map((s) => planned.find((p) => p.id === s.id) ?? s);
-    view = { name: 'log' };
+    back();
   }
 
   async function deleteEntry(entry: HangSession) {
@@ -193,7 +193,7 @@
     await store.deleteHangSession(entry.id, planned);
     data.hangSessions = data.hangSessions.filter((s) => s.id !== entry.id);
     data.sessions = data.sessions.map((s) => planned.find((p) => p.id === s.id) ?? s);
-    view = { name: 'log' };
+    back();
   }
 
   // ---- suggestions ----
@@ -224,9 +224,27 @@
 
   async function changeSettings(next: Settings) {
     if (!data || !store) return;
+    const prev = data.settings.schedule;
     await store.saveSettings(next);
     data.settings = next;
+    // New schedule days move the open sessions, from today.
+    if (prev.fullDay !== next.schedule.fullDay || prev.lightDay !== next.schedule.lightDay) {
+      const before = $state.snapshot(data.sessions);
+      // Start tomorrow when a session was already logged today.
+      const today = toIsoDate(new Date());
+      const trainedToday = data.hangSessions.some((h) => toIsoDate(new Date(h.datetime)) === today);
+      const after = redate(before, next, trainedToday ? addDays(today, 1) : today);
+      await store.saveSessions(after.filter((x, i) => x !== before[i]));
+      data.sessions = after;
+    }
   }
+
+  // Theme: "system" follows the phone; light and dark override it.
+  $effect(() => {
+    const theme = data?.settings.general.theme ?? 'system';
+    if (theme === 'system') delete document.documentElement.dataset.theme;
+    else document.documentElement.dataset.theme = theme;
+  });
 
   async function exportData() {
     if (!store) return;
@@ -277,6 +295,34 @@
 
   // ---- routing ----
 
+  // Sub-screens get one history entry, so the phone's back gesture leaves them.
+  // The timer replaces the preview, and the summary replaces the timer.
+  const SUB = new Set<View['name']>(['preview', 'timer', 'summary', 'entry']);
+  const parentOf = (v: View): View => (v.name === 'entry' ? { name: 'log' } : { name: 'home' });
+
+  function go(v: View) {
+    if (SUB.has(v.name)) {
+      if (SUB.has(view.name)) history.replaceState({ sub: true }, '');
+      else history.pushState({ sub: true }, '');
+    }
+    view = v;
+  }
+
+  /** Leave a sub-screen, through history when it has an entry. */
+  function back() {
+    if (history.state?.sub) history.back();
+    else view = parentOf(view);
+  }
+
+  function onPopState() {
+    if (view.name === 'timer') {
+      // Back during a session would lose it; Finish is the way out.
+      history.pushState({ sub: true }, '');
+      return;
+    }
+    if (SUB.has(view.name)) view = parentOf(view);
+  }
+
   // Every screen change starts at the top.
   $effect(() => {
     void view;
@@ -294,6 +340,8 @@
   const tab = $derived(view.name === 'settings' ? 'settings' : view.name === 'log' ? 'log' : 'home');
 </script>
 
+<svelte:window onpopstate={onPopState} />
+
 {#if !checked}
   <div class="center" aria-busy="true"></div>
 {:else if offlineNoUser}
@@ -310,15 +358,15 @@
       settings={data.settings}
       onSave={saveSession}
       onReset={() => resetSession(current.id)}
-      onBack={() => (view = { name: 'home' })}
-      onStart={() => (view = { name: 'timer', id: current.id })}
+      onBack={back}
+      onStart={() => go({ name: 'timer', id: current.id })}
     />
   </main>
 {:else if view.name === 'timer' && current}
   <Timer session={current} settings={data.settings} onDone={(o) => timerDone(current, o)} />
 {:else if view.name === 'summary' && summarySession}
   <main>
-    <Summary session={summarySession} lastBodyweight={lastBodyweight()} onChange={updateHangSession} onDone={() => (view = { name: 'home' })} />
+    <Summary session={summarySession} lastBodyweight={lastBodyweight()} onChange={updateHangSession} onDone={back} />
   </main>
 {:else if view.name === 'entry'}
   {@const v = view}
@@ -330,7 +378,7 @@
       lastBodyweight={lastBodyweight()}
       onSave={saveEntry}
       onDelete={() => deleteEntry(v.entry)}
-      onBack={() => (view = { name: 'log' })}
+      onBack={back}
     />
   </main>
 {:else}
@@ -366,7 +414,7 @@
         settings={data.settings}
         suggestion={suggestions[0] ?? null}
         {onSuggestion}
-        onOpen={(id) => (view = { name: 'preview', id })}
+        onOpen={(id) => go({ name: 'preview', id })}
       />
     {/if}
   </main>

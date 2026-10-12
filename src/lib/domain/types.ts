@@ -87,6 +87,9 @@ export interface Settings {
     /** A break longer than this many days suggests going back one week; 0 turns it off. */
     breakDays: number;
   };
+  general: {
+    theme: 'system' | 'light' | 'dark';
+  };
 }
 
 export interface HangSet {

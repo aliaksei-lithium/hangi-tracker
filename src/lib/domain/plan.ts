@@ -46,6 +46,7 @@ export function defaultSettings(): Settings {
     schedule: { fullDay: 1, lightDay: 4, minGapHours: 48 },
     timer: { countdownSec: 10, prepareSec: 5, beeps: true, voice: true, wakeLock: true },
     rules: { editScope: null, suggestions: true, painThreshold: 3, breakDays: 10 },
+    general: { theme: 'system' },
   };
 }
 
@@ -61,6 +62,7 @@ export function withDefaults(saved: Partial<Settings> | undefined): Settings {
     schedule: { ...d.schedule, ...saved.schedule },
     timer: { ...d.timer, ...saved.timer },
     rules: { ...d.rules, ...saved.rules },
+    general: { ...d.general, ...saved.general },
   };
 }
 
