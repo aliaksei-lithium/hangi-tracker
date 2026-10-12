@@ -9,7 +9,7 @@
     "build": "vite build",
     "preview": "npm run build && wrangler dev",
     "lint": "svelte-check --tsconfig ./tsconfig.app.json --fail-on-warnings --threshold warning",
-    "typecheck": "svelte-check --tsconfig ./tsconfig.app.json && tsc -p tsconfig.node.json && tsc -p tsconfig.worker.json",
+    "typecheck": "svelte-check --tsconfig ./tsconfig.app.json && tsc -p tsconfig.node.json && tsc -p tsconfig.worker.json && tsc -p tsconfig.test.json",
     "test": "vitest run",
     "types:worker": "wrangler types worker/worker-configuration.d.ts",
     "deploy": "npm run build && wrangler deploy"

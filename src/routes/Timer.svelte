@@ -131,7 +131,11 @@
     update(finish(timer, Date.now()));
   }
 
+  let sent = false;
   function report() {
+    // Runs once: the automatic call after "Done" and the button must not save twice.
+    if (sent) return;
+    sent = true;
     const final = $state.snapshot(timer);
     const end = final.finishedAt ?? Date.now();
     const sets: HangSet[] = workResults(final, end).map((r) => {

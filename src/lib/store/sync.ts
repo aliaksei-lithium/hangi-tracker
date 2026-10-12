@@ -72,6 +72,10 @@ export class Sync {
         }
         return;
       }
+      if (server.rev === 0 && meta.rev !== 0) {
+        // The server has no copy (for example a new database): start again from rev 0.
+        await this.store.setMeta({ ...meta, rev: 0, dirty: true });
+      }
       if (meta.dirty || server.rev === 0) await this.push();
       else this.events.status('idle');
     } catch (e) {
