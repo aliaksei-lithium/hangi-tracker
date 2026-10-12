@@ -1,5 +1,33 @@
 # Handover: start of the build
 
+## Status on 2026-10-13 (overnight session, run locally)
+
+Done and pushed:
+- Phase 0: Vite + Svelte + TS app, Worker with `/api/health`, `wrangler.jsonc`, CI (green).
+- Phase 1: D1 migrations, password-only login, session cookie, `scripts/add_user.py`,
+  Login, Home greeting, Settings placeholder with Log out. Tested end to end on a local
+  Worker (`npm run preview`).
+- Phase 2: plan generator with tests, IndexedDB store, real next-session card, preview
+  with full editing, scope sheet, Reset to plan, 48 h warning.
+- The two open decisions were taken with the design defaults: password-only login,
+  square corners. Change either if you want.
+- D1 database `hangi-tracker` is created in the account (id in `wrangler.jsonc`).
+
+Waiting for the owner (the session was not allowed to run production deploys):
+
+```
+npx wrangler d1 migrations apply hangi-tracker --remote
+openssl rand -hex 32 | npx wrangler secret put SESSION_SECRET
+npm run deploy
+python3 scripts/add_user.py        # then run the printed command
+```
+
+Then open the `workers.dev` URL that `npm run deploy` prints and log in. After the first
+real login, check the Worker logs for CPU-limit errors (see PLAN.md, risks).
+
+---
+
+
 Written 2026-10-12 for the next session. Read this first, then `docs/PLAN.md`.
 
 ## Where things are

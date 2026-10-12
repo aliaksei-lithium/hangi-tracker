@@ -163,6 +163,17 @@ product: log in, be greeted, run a session.
 | 7 | Settings and polish | All settings groups, units, theme, Russian and English, PWA install prompt, accessibility pass, Playwright smoke test. | Installable, offline, readable at 2 m. |
 | D | Design integration | Tokens, components and screens from the design handoff in `docs/design/` (see its README). `tokens.css` becomes the app's CSS base in phase 0; screens are rebuilt in Svelte as each phase reaches them. | Screens match the design board. |
 
+## 5a. Decisions taken during the build
+
+- Phase 2: where the requirements give a range, the middle is used (full rest 2:30;
+  light sessions 3 sets in weeks 1-4, 4 sets in weeks 5-8). Week 1 starts on the first
+  full-session day on or after the day the plan is created.
+- "This and all next" carries only session-wide changes to later sessions of the same
+  type. Hang time and set count carry as a difference, so the progression keeps its
+  shape; edge, rest, grip and weight carry as the value. A change to one set stays local.
+- A missed session stays the next session (marked overdue) until it is done or skipped.
+- Lint is `svelte-check --fail-on-warnings` (no ESLint, fewer dependencies).
+
 ## 6. Setup checklist (one-time, by the owner)
 
 Status on 2026-10-13: steps 1 and 2 are done.
