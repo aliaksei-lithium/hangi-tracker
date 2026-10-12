@@ -12,6 +12,7 @@ import {
   sessionSummary,
   tooSoonHours,
   upcomingSessions,
+  withDefaults,
 } from '../src/lib/domain/plan';
 import type { PlannedSession } from '../src/lib/domain/types';
 
@@ -90,11 +91,11 @@ describe('next and upcoming sessions', () => {
 describe('tooSoonHours', () => {
   const now = new Date('2026-10-13T18:00:00Z');
   it('warns when the last session was less than 48 hours ago', () => {
-    const log = [{ id: 'a', plannedId: null, datetime: '2026-10-12T16:00:00Z', sets: [] }];
+    const log = [{ datetime: '2026-10-12T16:00:00Z' }];
     expect(tooSoonHours(log, 48, now)).toBe(26);
   });
   it('is quiet after 48 hours or without sessions', () => {
-    expect(tooSoonHours([{ id: 'a', plannedId: null, datetime: '2026-10-11T17:00:00Z', sets: [] }], 48, now)).toBeNull();
+    expect(tooSoonHours([{ datetime: '2026-10-11T17:00:00Z' }], 48, now)).toBeNull();
     expect(tooSoonHours([], 48, now)).toBeNull();
   });
 });
@@ -171,5 +172,15 @@ describe('resetToPlan', () => {
     expect(shape(reset)).toBe('25mm 6x7s');
     expect(reset.warmup).toBe(true);
     expect(reset.status).toBe('planned');
+  });
+});
+
+describe('withDefaults', () => {
+  it('adds settings fields that older saved data does not have', () => {
+    const old = defaultSettings() as unknown as { timer: Record<string, unknown> };
+    delete old.timer.voice;
+    const merged = withDefaults(old as never);
+    expect(merged.timer.voice).toBe(true);
+    expect(merged.timer.countdownSec).toBe(10);
   });
 });

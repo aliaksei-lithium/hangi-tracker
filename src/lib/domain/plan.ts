@@ -44,8 +44,23 @@ export function defaultSettings(): Settings {
       grip: 'half_crimp',
     },
     schedule: { fullDay: 1, lightDay: 4, minGapHours: 48 },
-    timer: { countdownSec: 10, prepareSec: 5 },
+    timer: { countdownSec: 10, prepareSec: 5, beeps: true, voice: true, wakeLock: true },
     rules: { editScope: null },
+  };
+}
+
+/**
+ * Fills fields that settings saved by an older app version do not have yet.
+ * Each group is merged one level deep with the defaults.
+ */
+export function withDefaults(saved: Partial<Settings> | undefined): Settings {
+  const d = defaultSettings();
+  if (!saved) return d;
+  return {
+    protocol: { ...d.protocol, ...saved.protocol },
+    schedule: { ...d.schedule, ...saved.schedule },
+    timer: { ...d.timer, ...saved.timer },
+    rules: { ...d.rules, ...saved.rules },
   };
 }
 
@@ -126,7 +141,7 @@ export function upcomingSessions(sessions: PlannedSession[], count: number): Pla
 }
 
 /** Hours since the last logged session when that is less than the minimum gap, else null. */
-export function tooSoonHours(hangSessions: HangSession[], minGapHours: number, now: Date): number | null {
+export function tooSoonHours(hangSessions: Pick<HangSession, 'datetime'>[], minGapHours: number, now: Date): number | null {
   let last = -Infinity;
   for (const s of hangSessions) last = Math.max(last, Date.parse(s.datetime));
   if (!Number.isFinite(last)) return null;

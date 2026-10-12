@@ -66,6 +66,9 @@ export interface Settings {
   timer: {
     countdownSec: number;
     prepareSec: number;
+    beeps: boolean;
+    voice: boolean;
+    wakeLock: boolean;
   };
   rules: {
     /** null = ask every time. */
@@ -80,9 +83,24 @@ export interface HangSet {
   completed: boolean;
 }
 
+export const PAIN_LOCATIONS = ['finger_joint', 'pulley', 'forearm', 'elbow', 'shoulder', 'none'] as const;
+export type PainLocation = (typeof PAIN_LOCATIONS)[number];
+
 export interface HangSession {
   id: string;
   plannedId: string | null;
-  datetime: string; // ISO timestamp
+  type: SessionType | null;
+  week: number | null;
+  datetime: string; // ISO timestamp of the start
+  durationSec: number;
+  /** Work sets in the session plan; `sets` holds only the sets that were started. */
+  plannedSets: number;
   sets: HangSet[];
+  rpe: number | null; // 1-10
+  painLevel: number | null; // 0-10
+  painLocations: PainLocation[];
+  /** Sharp finger-joint pain, a click or a pop. Shows the safety message. */
+  sharpPain: boolean;
+  bodyweightKg: number | null;
+  note: string;
 }

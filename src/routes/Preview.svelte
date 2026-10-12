@@ -1,8 +1,10 @@
 <script lang="ts">
   import { untrack } from 'svelte';
+  import { player } from '../lib/audio/player';
   import { formatShortDate } from '../lib/domain/dates';
   import { formatDuration, sessionDurationSec } from '../lib/domain/plan';
-  import { EDGES_MM, type EditScope, type Grip, type PlannedSession, type Settings } from '../lib/domain/types';
+  import { EDGES_MM, type EditScope, type PlannedSession, type Settings } from '../lib/domain/types';
+  import { GRIPS, gripLabel, kg, typeLabel } from '../lib/format';
   import Stepper from '../lib/ui/Stepper.svelte';
   import Switch from '../lib/ui/Switch.svelte';
 
@@ -22,13 +24,6 @@
     onStart: () => void;
   } = $props();
 
-  const GRIPS: { value: Grip; label: string }[] = [
-    { value: 'half_crimp', label: 'Half crimp' },
-    { value: 'open_hand', label: 'Open hand' },
-  ];
-  const gripLabel = (g: Grip) => GRIPS.find((x) => x.value === g)?.label ?? g;
-  const kg = (v: number) => (v > 0 ? `+${v} kg` : v < 0 ? `−${-v} kg` : '0 kg');
-  const typeLabel = (t: string) => (t === 'full' ? 'Full' : 'Light');
 
   // The draft is a deep copy; the saved session only changes on Save.
   const copy = () => structuredClone($state.snapshot(session));
@@ -71,6 +66,8 @@
   }
 
   function leave(action: 'start' | 'back') {
+    // Audio may only be unlocked inside the tap itself.
+    if (action === 'start') player.unlock();
     if (!dirty) return action === 'start' ? onStart() : onBack();
     const remembered = settings.rules.editScope;
     if (remembered) return save(action, remembered, false);
@@ -80,6 +77,7 @@
   }
 
   async function save(action: 'start' | 'back', s: EditScope, rememberChoice: boolean) {
+    if (action === 'start') player.unlock();
     saving = true;
     try {
       await onSave($state.snapshot(draft), s, rememberChoice);

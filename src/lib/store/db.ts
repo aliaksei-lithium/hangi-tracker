@@ -3,7 +3,7 @@
 
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
 import { toIsoDate } from '../domain/dates';
-import { defaultSettings, generatePlan } from '../domain/plan';
+import { generatePlan, withDefaults } from '../domain/plan';
 import type { HangSession, Plan, PlannedSession, Settings } from '../domain/types';
 
 interface HangiDB extends DBSchema {
@@ -41,11 +41,9 @@ export class Store {
 
   /** Loads everything; on first use creates default settings and the plan. */
   async load(today: Date = new Date()): Promise<Snapshot> {
-    let settings = await this.db.get('settings', CURRENT);
-    if (!settings) {
-      settings = defaultSettings();
-      await this.db.put('settings', settings, CURRENT);
-    }
+    const saved = await this.db.get('settings', CURRENT);
+    const settings = withDefaults(saved);
+    if (JSON.stringify(saved) !== JSON.stringify(settings)) await this.db.put('settings', settings, CURRENT);
     let plan = await this.db.get('plan', CURRENT);
     let sessions: PlannedSession[];
     if (!plan) {
@@ -68,6 +66,16 @@ export class Store {
   async saveSessions(sessions: PlannedSession[]): Promise<void> {
     const tx = this.db.transaction('plannedSessions', 'readwrite');
     await Promise.all([...sessions.map((s) => tx.store.put(s)), tx.done]);
+  }
+
+  /** Saves a finished session and marks its planned session done, in one transaction. */
+  async saveHangSession(session: HangSession, planned: PlannedSession | null): Promise<void> {
+    const tx = this.db.transaction(['hangSessions', 'plannedSessions'], 'readwrite');
+    await Promise.all([
+      tx.objectStore('hangSessions').put(session),
+      planned ? tx.objectStore('plannedSessions').put(planned) : Promise.resolve(),
+      tx.done,
+    ]);
   }
 
   async saveSettings(settings: Settings): Promise<void> {

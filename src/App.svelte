@@ -1,15 +1,21 @@
 <script lang="ts">
   import { fetchMe, logout, NetworkError, type User } from './lib/api';
   import { resetToPlan, saveEdit } from './lib/domain/plan';
-  import type { EditScope, PlannedSession, Settings } from './lib/domain/types';
+  import type { EditScope, HangSession, PlannedSession, Settings } from './lib/domain/types';
   import { Store, type Snapshot } from './lib/store/db';
   import Home from './routes/Home.svelte';
   import Login from './routes/Login.svelte';
   import Preview from './routes/Preview.svelte';
   import SettingsView from './routes/Settings.svelte';
-  import TimerPlaceholder from './routes/TimerPlaceholder.svelte';
+  import Summary from './routes/Summary.svelte';
+  import Timer, { type TimerOutcome } from './routes/Timer.svelte';
 
-  type View = { name: 'home' } | { name: 'settings' } | { name: 'preview'; id: string } | { name: 'timer'; id: string };
+  type View =
+    | { name: 'home' }
+    | { name: 'settings' }
+    | { name: 'preview'; id: string }
+    | { name: 'timer'; id: string }
+    | { name: 'summary'; id: string };
 
   let user = $state<User | null>(null);
   let checked = $state(false);
@@ -68,6 +74,45 @@
     data.sessions = data.sessions.map((x) => (x.id === id ? reset : x));
   }
 
+  function lastBodyweight(): number | null {
+    if (!data) return null;
+    const withWeight = data.hangSessions.filter((s) => s.bodyweightKg !== null);
+    withWeight.sort((a, b) => b.datetime.localeCompare(a.datetime));
+    return withWeight[0]?.bodyweightKg ?? null;
+  }
+
+  /** Saves the session as soon as the timer ends, before the summary opens. */
+  async function timerDone(planned: PlannedSession, o: TimerOutcome) {
+    if (!data || !store) return;
+    const session: HangSession = {
+      id: crypto.randomUUID(),
+      plannedId: planned.id,
+      type: planned.type,
+      week: planned.week,
+      datetime: new Date(o.startedAt).toISOString(),
+      durationSec: o.durationSec,
+      plannedSets: o.plannedSets,
+      sets: o.sets,
+      rpe: null,
+      painLevel: null,
+      painLocations: [],
+      sharpPain: false,
+      bodyweightKg: null,
+      note: '',
+    };
+    const done: PlannedSession = { ...$state.snapshot(planned), status: 'done' };
+    await store.saveHangSession(session, done);
+    data.hangSessions = [...data.hangSessions, session];
+    data.sessions = data.sessions.map((s) => (s.id === done.id ? done : s));
+    view = { name: 'summary', id: session.id };
+  }
+
+  async function updateHangSession(s: HangSession) {
+    if (!data || !store) return;
+    await store.saveHangSession(s, null);
+    data.hangSessions = data.hangSessions.map((x) => (x.id === s.id ? s : x));
+  }
+
   async function changeSettings(next: Settings) {
     if (!data || !store) return;
     await store.saveSettings(next);
@@ -77,6 +122,10 @@
   const current = $derived.by(() => {
     const v = view;
     return data && (v.name === 'preview' || v.name === 'timer') ? data.sessions.find((s) => s.id === v.id) : undefined;
+  });
+  const summarySession = $derived.by(() => {
+    const v = view;
+    return data && v.name === 'summary' ? data.hangSessions.find((s) => s.id === v.id) : undefined;
   });
   const tab = $derived(view.name === 'settings' ? 'settings' : 'home');
 </script>
@@ -101,8 +150,17 @@
       onStart={() => (view = { name: 'timer', id: current.id })}
     />
   </main>
-{:else if view.name === 'timer'}
-  <TimerPlaceholder onBack={() => (view = { name: 'home' })} />
+{:else if view.name === 'timer' && current}
+  <Timer session={current} settings={data.settings} onDone={(o) => timerDone(current, o)} />
+{:else if view.name === 'summary' && summarySession}
+  <main>
+    <Summary
+      session={summarySession}
+      lastBodyweight={lastBodyweight()}
+      onChange={updateHangSession}
+      onDone={() => (view = { name: 'home' })}
+    />
+  </main>
 {:else}
   <main>
     {#if view.name === 'settings'}

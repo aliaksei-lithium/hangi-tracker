@@ -5,6 +5,7 @@
   import type { HangSession, Plan, PlannedSession, Settings } from '../lib/domain/types';
   import { greeting } from '../lib/greeting';
   import Frame from '../lib/ui/Frame.svelte';
+  import { typeLabel } from '../lib/format';
 
   let {
     user,
@@ -35,7 +36,6 @@
   const lastDone = $derived(
     [...hangSessions].sort((a, b) => b.datetime.localeCompare(a.datetime))[0] ?? null,
   );
-  const typeLabel = (t: string) => (t === 'full' ? 'Full' : 'Light');
   const NUMBERS = ['no', 'one', 'two', 'three', 'four', 'five', 'six'];
 
   const lead = $derived.by(() => {
@@ -63,7 +63,7 @@
   {#if soon !== null}
     <div class="notice notice-warning" role="status">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M12 3l10 18H2z"></path><path d="M12 10v4M12 17h.01"></path></svg>
-      <span><strong>Last session was {soon} hours ago.</strong> Leave at least {settings.schedule.minGapHours} hours between sessions.</span>
+      <span><strong>Last session was {soon === 0 ? 'less than an hour' : soon === 1 ? '1 hour' : `${soon} hours`} ago.</strong> Leave at least {settings.schedule.minGapHours} hours between sessions.</span>
     </div>
   {/if}
 
@@ -101,8 +101,11 @@
     {#if lastDone}
       <div class="eyebrow list-title gap">Last completed</div>
       <div class="item static">
-        <span><strong>{formatShortDate(toIsoDate(new Date(lastDone.datetime)))}</strong></span>
-        <span class="muted">{lastDone.sets.filter((s) => s.completed).length}/{lastDone.sets.length}</span>
+        <span><strong>{formatShortDate(toIsoDate(new Date(lastDone.datetime)))}</strong>{lastDone.type ? ` · ${typeLabel(lastDone.type)}` : ''}</span>
+        <span class="muted done">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="2" aria-hidden="true"><path d="M5 12l5 5L20 7"></path></svg>
+          {lastDone.sets.filter((s) => s.completed).length}/{lastDone.plannedSets}{lastDone.rpe ? ` · RPE ${lastDone.rpe}` : ''}
+        </span>
       </div>
     {/if}
   </div>
@@ -138,4 +141,5 @@
   .item.static { border-bottom: 0; }
   .item strong { font-weight: 600; }
   .muted { color: var(--muted); }
+  .done { display: flex; align-items: center; gap: 6px; }
 </style>
