@@ -5,7 +5,7 @@ Plan date: 2026-10-12. Source: the requirements doc "Hangboard Tracker: Requirem
 ## 1. What we are building
 
 A mobile-first PWA for hangboard training, deployed on Cloudflare, behind a simple
-name + password login. The user opens it, gets greeted by name, sees the next
+password login. The user opens it, gets greeted by name, sees the next
 session ready, taps Start, puts the phone on the floor and hangs. Results are
 saved and shown in progress views.
 
@@ -18,7 +18,7 @@ more users later". These are reconciled like this:
 | Topic | Requirements doc | Decision for v1 |
 | --- | --- | --- |
 | Hosting | PWA, offline | Cloudflare Worker serves the PWA as static assets and a tiny JSON API under `/api/*`. |
-| Accounts | none | Minimal login: name + password. Users are created by a script, not by a sign-up form. |
+| Accounts | none | Minimal login: password only (design default, taken 2026-10-13; the owner can still change it). Users keep a `name` so name + password can be added later. Users are created by a script, not by a sign-up form. |
 | Data | IndexedDB on device, "allow sync later" | IndexedDB stays the working store (timer and log work offline). The Worker keeps a per-user snapshot in D1 and syncs it. This is the "sync later" done minimally now. |
 | Multi-user | out of scope | The data is namespaced by user from day one, so adding users is only running the script. No admin UI. |
 | Greeting | not mentioned | Home screen greets by display name, with a time-of-day line and the next session. |
@@ -80,15 +80,17 @@ Phone (PWA)                                  Cloudflare
   `pw_hash`, `created_at`. Password hashing: PBKDF2-SHA256, 100 000 iterations,
   16-byte salt. The same algorithm is available in Python's `hashlib` and in
   WebCrypto on Workers, so the script and the Worker agree.
-- `POST /api/login` with `{name, password}` verifies the hash (constant-time
-  compare). Note: the design chat later chose a password-only login; see
-  `docs/HANDOVER.md`. If confirmed, the body is `{password}` and the Worker
-  checks it against every user's hash; the table keeps `name` for later.
-  It and sets an `HttpOnly; Secure; SameSite=Lax` cookie. The cookie value
-  is `userId.expiry.signature`, signed with HMAC-SHA256 and `SESSION_SECRET`.
-  No session table. Lifetime 90 days.
+- `POST /api/login` with `{password}`. Login is password only (design default,
+  taken at the start of the build). The Worker hashes the password with every
+  user's salt and compares in constant time, without an early exit, so the timing
+  does not show which user matched. Every user therefore needs a different
+  password. On success it sets an `HttpOnly; Secure; SameSite=Lax` cookie
+  `ht_session`. The value is `userId.expiry.signature`, signed with HMAC-SHA256
+  and `SESSION_SECRET`. No session table. Lifetime 90 days.
+- POST requests must have `Content-Type: application/json`, so a cross-site HTML
+  form cannot post to the API.
 - `GET /api/me` returns `{name, displayName}`. `POST /api/logout` clears the cookie.
-- Wrong name or password gives the same generic error. The slow hash is the
+- A wrong password gives one generic error. The slow hash is the
   brute-force defence for v1. Cloudflare's rate-limiting binding can be added
   later without touching the app.
 - Offline: the app keeps the last known user in IndexedDB and works. Sync
@@ -163,14 +165,28 @@ product: log in, be greeted, run a session.
 
 ## 6. Setup checklist (one-time, by the owner)
 
-1. Cloudflare account, `wrangler login`.
-2. `wrangler d1 create hangi-tracker` and put the database id in `wrangler.jsonc`.
-3. `wrangler d1 migrations apply hangi-tracker --remote`.
-4. `wrangler secret put SESSION_SECRET` (any long random string).
-5. `python3 scripts/add_user.py` and run the printed command to create the first user.
-6. In the Cloudflare dashboard, connect the Worker to the GitHub repo (Workers Builds, branch `main`, build `npm run build`, deploy `npx wrangler deploy`).
+Status on 2026-10-13: steps 1 and 2 are done.
+
+1. Cloudflare account, `npx wrangler login`. Done.
+2. `wrangler d1 create hangi-tracker`. Done, the id is in `wrangler.jsonc`.
+3. `npx wrangler d1 migrations apply hangi-tracker --remote`.
+4. `npx wrangler secret put SESSION_SECRET` (any long random string, for example `openssl rand -hex 32`).
+5. `npm run deploy` (builds and runs `wrangler deploy`).
+6. `python3 scripts/add_user.py` and run the printed command to create the first user.
+7. In the Cloudflare dashboard, connect the Worker to the GitHub repo (Workers Builds, branch `main`, build `npm run build`, deploy `npx wrangler deploy`).
+
+Local development: copy `.dev.vars.example` to `.dev.vars`, run
+`npx wrangler d1 migrations apply hangi-tracker --local`, create a user with
+`python3 scripts/add_user.py --local`, then `npm run preview` (build + local Worker
+on port 8787). For hot reload run `npm run dev:worker` and `npm run dev` together;
+Vite proxies `/api` to port 8787.
 
 ## 7. Risks and open points
+
+- PBKDF2 with 100 000 iterations costs tens of milliseconds of CPU per user on
+  each login. The Workers free plan allows 10 ms CPU per request. Check the first
+  real logins in the Worker logs; if they hit the limit, use the paid plan or
+  lower the iterations for new hashes (store the count per user).
 
 - iOS audio with the screen locked is the main technical risk. Phase 3 includes
   a real-device test on iPhone and Android before the rest of the timer polish.
