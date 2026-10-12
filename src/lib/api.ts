@@ -40,3 +40,32 @@ export async function login(password: string): Promise<User | null> {
 export async function logout(): Promise<void> {
   await call('/api/logout', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
 }
+
+/** Thrown when the session cookie is no longer valid. */
+export class UnauthorizedError extends Error {}
+
+export interface ServerData {
+  rev: number;
+  doc: unknown;
+  updatedAt: string | null;
+}
+
+export async function getData(): Promise<ServerData> {
+  const res = await call('/api/data');
+  if (res.status === 401) throw new UnauthorizedError('unauthorized');
+  if (!res.ok) throw new Error(`data: ${res.status}`);
+  return res.json();
+}
+
+/** Returns the new rev, or a conflict with the server's current rev. */
+export async function putData(baseRev: number, doc: unknown): Promise<{ ok: true; rev: number } | { ok: false; rev: number }> {
+  const res = await call('/api/data', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ baseRev, doc }),
+  });
+  if (res.status === 401) throw new UnauthorizedError('unauthorized');
+  if (res.status === 409) return { ok: false, rev: (await res.json()).rev };
+  if (!res.ok) throw new Error(`data: ${res.status}`);
+  return { ok: true, rev: (await res.json()).rev };
+}

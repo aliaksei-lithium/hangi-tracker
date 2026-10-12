@@ -1,6 +1,7 @@
 // One Worker serves the built app (static assets) and the JSON API under /api/*.
 // wrangler.jsonc routes only /api/* here first; every other path goes to the assets.
 import { login, logout, me } from './auth';
+import { getData, putData } from './data';
 import { json } from './http';
 
 export default {
@@ -10,7 +11,7 @@ export default {
 
     // State-changing calls must send JSON. A plain HTML form cannot, which blocks
     // cross-site form posts on top of the SameSite=Lax cookie.
-    if (request.method === 'POST' && !request.headers.get('Content-Type')?.startsWith('application/json')) {
+    if ((request.method === 'POST' || request.method === 'PUT') && !request.headers.get('Content-Type')?.startsWith('application/json')) {
       return json({ error: 'unsupported_media_type' }, 415);
     }
 
@@ -24,6 +25,10 @@ export default {
         return logout();
       case 'GET /api/me':
         return me(request, env);
+      case 'GET /api/data':
+        return getData(request, env);
+      case 'PUT /api/data':
+        return putData(request, env);
       default:
         return json({ error: 'not_found' }, 404);
     }

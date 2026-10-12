@@ -136,6 +136,7 @@ button { cursor: pointer; }
 .btn-primary { background: var(--accent); color: var(--on-accent); }
 .btn-primary:hover:not(:disabled) { background: var(--accent-hover); }
 .btn-secondary { background: transparent; border-color: var(--divider); font-size: 20px; }
+.btn-danger { background: var(--danger); color: var(--bg); }
 .btn:disabled { opacity: .5; cursor: default; }
 
 .notice { display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px; font-size: 15px; line-height: 1.4; }

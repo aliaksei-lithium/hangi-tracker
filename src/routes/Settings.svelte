@@ -10,20 +10,45 @@
   let {
     user,
     settings,
+    syncLine,
     onChange,
     onLogout,
+    onExport,
+    onImport,
+    onReset,
   }: {
     user: User;
     settings: Settings;
+    syncLine: string;
     onChange: (settings: Settings) => void;
     onLogout: () => void;
+    onExport: () => void;
+    onImport: (file: File) => Promise<string | null>;
+    onReset: () => Promise<void>;
   } = $props();
+
+  let importError = $state<string | null>(null);
+  let pendingImport = $state<File | null>(null);
+  let confirmReset = $state(false);
+  let fileInput: HTMLInputElement;
+
+  async function runImport() {
+    if (!pendingImport) return;
+    importError = await onImport(pendingImport);
+    pendingImport = null;
+  }
 
   // Edit a copy, save on every change.
   let draft = $state<Settings>(untrack(() => structuredClone($state.snapshot(settings))));
   $effect(() => {
+    // Tracks only the draft: save when the user changed something.
     const next = $state.snapshot(draft);
-    if (JSON.stringify(next) !== JSON.stringify($state.snapshot(settings))) onChange(next);
+    if (JSON.stringify(next) !== untrack(() => JSON.stringify($state.snapshot(settings)))) onChange(next);
+  });
+  $effect(() => {
+    // Tracks only the prop: take new settings from outside (import, reset, sync).
+    const outside = $state.snapshot(settings);
+    if (untrack(() => JSON.stringify($state.snapshot(draft))) !== JSON.stringify(outside)) draft = structuredClone(outside);
   });
 
   const SCOPES: { value: EditScope | null; label: string }[] = [
@@ -90,11 +115,65 @@
   </section>
 
   <section>
+    <h2 class="eyebrow">Data</h2>
+    <p class="muted small">{syncLine}</p>
+    <div class="data-actions">
+      <button class="btn btn-secondary" onclick={onExport}>Export JSON</button>
+      <button class="btn btn-secondary" onclick={() => fileInput.click()}>Import JSON</button>
+    </div>
+    <input
+      bind:this={fileInput}
+      class="hidden"
+      type="file"
+      accept="application/json,.json"
+      onchange={(e) => {
+        pendingImport = e.currentTarget.files?.[0] ?? null;
+        importError = null;
+        e.currentTarget.value = '';
+      }}
+    />
+    {#if importError}<div class="notice notice-danger" role="alert"><span>{importError}</span></div>{/if}
+    <button class="link danger" onclick={() => (confirmReset = true)}>Reset all data</button>
+  </section>
+
+  <section>
     <h2 class="eyebrow">Signed in as</h2>
     <div>{user.displayName}</div>
     <button class="btn btn-secondary" onclick={onLogout}>Log out</button>
   </section>
 </div>
+
+{#if pendingImport}
+  <div class="scrim" role="presentation">
+    <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="imp-title">
+      <h2 id="imp-title" class="display">Replace all data?</h2>
+      <p class="muted">The file {pendingImport.name} replaces the plan, the log and the settings on this device and on the server.</p>
+      <div class="actions">
+        <button class="btn btn-secondary" onclick={() => (pendingImport = null)}>Cancel</button>
+        <button class="btn btn-primary" onclick={runImport}>Replace</button>
+      </div>
+    </div>
+  </div>
+{/if}
+
+{#if confirmReset}
+  <div class="scrim" role="presentation">
+    <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="reset-title">
+      <h2 id="reset-title" class="display">Reset all data?</h2>
+      <p class="muted">The log, the plan and the settings are deleted here and on the server. A new 8-week plan starts. Export first if you want a copy.</p>
+      <div class="actions">
+        <button class="btn btn-secondary" onclick={() => (confirmReset = false)}>Cancel</button>
+        <button
+          class="btn btn-danger"
+          onclick={async () => {
+            await onReset();
+            confirmReset = false;
+          }}>Reset</button
+        >
+      </div>
+    </div>
+  </div>
+{/if}
 
 <style>
   .content { padding: var(--sp-6) var(--sp-5); display: flex; flex-direction: column; gap: var(--sp-6); }
@@ -113,4 +192,15 @@
   .option { min-height: 52px; display: flex; align-items: center; gap: 14px; padding: 8px 14px; cursor: pointer; }
   .option + .option { border-top: 1px solid var(--divider); }
   .option input { width: 22px; height: 22px; margin: 0; accent-color: var(--accent); }
+  .muted { color: var(--muted); margin: 0; }
+  .small { font-size: var(--fs-sm); }
+  .data-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .data-actions .btn { font-size: 20px; height: 52px; }
+  .hidden { display: none; }
+  .link { min-height: 48px; border: 0; background: transparent; font-weight: 600; font-size: 15px; padding: 0; align-self: flex-start; }
+  .danger { color: var(--danger); }
+  .scrim { position: fixed; inset: 0; background: rgba(14, 15, 16, 0.55); display: flex; align-items: flex-end; justify-content: center; z-index: 10; }
+  .sheet { width: 100%; max-width: 560px; background: var(--surface); box-shadow: var(--shadow-3); padding: 24px 20px max(34px, env(safe-area-inset-bottom)); display: flex; flex-direction: column; gap: 16px; }
+  .sheet h2 { font-size: 28px; }
+  .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 </style>
