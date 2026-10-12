@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&amp;display=swap"></helmet>
+<div style="width:390px;height:844px;position:relative;overflow:hidden;background:var(--timer-bg,#0e0f10);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;color:var(--timer-text,#f4f6f8);display:flex;flex-direction:column">
+
+<sc-if value="{{ isFlood }}" hint-placeholder-val="{{ true }}">
+<div style="flex:1;display:flex;flex-direction:column;background:{{ bg }};color:{{ ink }};padding:0 20px 28px">
+  <div style="height:47px;display:flex;align-items:center;justify-content:space-between;font-size:15px;font-weight:600;padding:0 8px">
+    <span>9:41</span><span style="opacity:.8">Screen stays on</span>
+  </div>
+  <div style="display:flex;justify-content:space-between;align-items:baseline;font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:26px;letter-spacing:.01em;padding-top:8px">
+    <span>{{ setLine }}</span><span>{{ edge }}</span>
+  </div>
+  <div style="display:flex;gap:6px;padding-top:10px">
+    <sc-for list="{{ dots }}" as="d" hint-placeholder-count="5"><div style="flex:1;height:8px;border:2px solid {{ ink }};background:{{ d.bg }}"></div></sc-for>
+  </div>
+  <div style="flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;gap:4px">
+    <div style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:56px;line-height:1;letter-spacing:.06em">{{ label }}</div>
+    <div style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:{{ digitSize }};line-height:.9;font-variant-numeric:tabular-nums;letter-spacing:-.01em">{{ digits }}</div>
+    <div style="font-size:18px;font-weight:600;opacity:.92">{{ target }}</div>
+    <div style="width:100%;height:10px;border:2px solid {{ ink }};margin-top:18px;display:flex"><div style="width:{{ progress }};background:{{ ink }}"></div></div>
+    <div style="font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:28px;padding-top:14px">{{ next }}</div>
+  </div>
+  <sc-if value="{{ showResult }}" hint-placeholder-val="{{ false }}">
+    <div style="display:flex;flex-direction:column;gap:8px;padding-bottom:14px">
+      <div style="font-size:14px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;opacity:.9">Set 3 result</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div style="min-height:64px;display:flex;align-items:center;justify-content:center;gap:8px;background:{{ ink }};color:{{ bg }};font-weight:700;font-size:17px"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12l5 5L20 7"></path></svg>Completed</div>
+        <div style="min-height:64px;display:flex;align-items:center;justify-content:center;border:2px solid {{ ink }};font-weight:600;font-size:17px">Failed at 3 s</div>
+      </div>
+    </div>
+  </sc-if>
+  <div style="display:flex;flex-direction:column;gap:8px">
+    <div style="height:80px;display:flex;align-items:center;justify-content:center;gap:10px;background:{{ ink }};color:{{ bg }};font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:30px;letter-spacing:.04em">{{ pauseLabel }}</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+      <div style="height:72px;display:flex;align-items:center;justify-content:center;border:2px solid {{ ink }};font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:24px;opacity:{{ plusOpacity }}">+10 s</div>
+      <div style="height:72px;display:flex;align-items:center;justify-content:center;border:2px solid {{ ink }};font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:24px">Skip</div>
+      <div style="height:72px;display:flex;align-items:center;justify-content:center;border:2px solid {{ ink }};font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:24px">Finish</div>
+    </div>
+  </div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isBand }}" hint-placeholder-val="{{ false }}">
+<div style="flex:1;display:flex;flex-direction:column">
+  <div style="background:{{ bg }};color:{{ ink }};padding:0 20px 24px;display:flex;flex-direction:column;min-height:470px">
+    <div style="height:47px;display:flex;align-items:center;font-size:15px;font-weight:600;padding:0 8px">9:41</div>
+    <div style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:64px;line-height:1;letter-spacing:.06em;padding-top:16px">{{ label }}</div>
+    <div style="flex:1;display:flex;align-items:center;justify-content:center;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:{{ digitSize }};line-height:.9;font-variant-numeric:tabular-nums">{{ digits }}</div>
+    <div style="height:10px;border:2px solid {{ ink }};display:flex"><div style="width:{{ progress }};background:{{ ink }}"></div></div>
+  </div>
+  <div style="flex:1;display:flex;flex-direction:column;padding:20px 20px 28px;gap:14px">
+    <div style="display:flex;justify-content:space-between;font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:28px"><span>{{ setLine }}</span><span>{{ edge }}</span></div>
+    <div style="display:flex;justify-content:space-between;font-size:17px;color:var(--timer-muted,#a9adb2)"><span>{{ target }}</span></div>
+    <div style="font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:26px;color:var(--timer-muted,#a9adb2)">{{ next }}</div>
+    <div style="flex:1"></div>
+    <div style="display:grid;grid-template-columns:2fr 1fr;gap:8px">
+      <div style="height:72px;display:flex;align-items:center;justify-content:center;background:#f4f6f8;color:#0e0f10;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:28px">{{ pauseLabel }}</div>
+      <div style="height:72px;display:flex;align-items:center;justify-content:center;background:#1b1d20;font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:24px;opacity:{{ plusOpacity }}">+10 s</div>
+      <div style="height:72px;display:flex;align-items:center;justify-content:center;background:#1b1d20;font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:24px">Skip</div>
+      <div style="height:72px;display:flex;align-items:center;justify-content:center;background:#1b1d20;font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:24px">Finish</div>
+    </div>
+  </div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isRail }}" hint-placeholder-val="{{ false }}">
+<div style="flex:1;display:flex;flex-direction:column;padding:0 0 28px">
+  <div style="background:{{ bg }};color:{{ ink }};padding:0 20px 14px">
+    <div style="height:47px;display:flex;align-items:center;font-size:15px;font-weight:600;padding:0 8px">9:41</div>
+    <div style="display:flex;justify-content:space-between;align-items:flex-end">
+      <span style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:56px;line-height:1;letter-spacing:.06em">{{ label }}</span>
+      <span style="font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:24px;padding-bottom:6px">{{ setLine }}</span>
+    </div>
+  </div>
+  <div style="flex:1;display:grid;grid-template-columns:28px 1fr;gap:16px;padding:20px 20px 0">
+    <div style="border:2px solid {{ bg }};display:flex;flex-direction:column;justify-content:flex-end"><div style="height:{{ progress }};background:{{ bg }}"></div></div>
+    <div style="display:flex;flex-direction:column;justify-content:center;gap:10px">
+      <div style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:{{ digitSize }};line-height:.9;font-variant-numeric:tabular-nums">{{ digits }}</div>
+      <div style="font-size:18px;font-weight:600">{{ edge }} · {{ target }}</div>
+      <div style="font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:26px;color:var(--timer-muted,#a9adb2);padding-top:12px">{{ next }}</div>
+    </div>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:8px;padding:0 20px">
+    <div style="height:80px;display:flex;align-items:center;justify-content:center;border:3px solid {{ bg }};font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:30px;letter-spacing:.04em">{{ pauseLabel }}</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+      <div style="height:72px;display:flex;align-items:center;justify-content:center;background:#1b1d20;font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:24px;opacity:{{ plusOpacity }}">+10 s</div>
+      <div style="height:72px;display:flex;align-items:center;justify-content:center;background:#1b1d20;font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:24px">Skip</div>
+      <div style="height:72px;display:flex;align-items:center;justify-content:center;background:#1b1d20;font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:24px">Finish</div>
+    </div>
+  </div>
+</div>
+</sc-if>
+
+<sc-if value="{{ showConfirm }}" hint-placeholder-val="{{ false }}">
+  <div style="position:absolute;inset:0;background:rgba(0,0,0,.72);display:flex;align-items:flex-end;padding:20px 20px 28px">
+    <div style="width:100%;background:#1b1d20;border:1px solid rgba(255,255,255,.12);padding:24px 20px 20px;display:flex;flex-direction:column;gap:12px">
+      <div style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:34px;line-height:1">Finish session?</div>
+      <div style="font-size:17px;line-height:1.45;color:#a9adb2">2 of 5 sets are done. They will be saved and the summary opens next.</div>
+      <div style="display:flex;flex-direction:column;gap:8px;padding-top:8px">
+        <div style="height:72px;display:flex;align-items:center;justify-content:center;background:#f4f6f8;color:#0e0f10;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:28px">Keep going</div>
+        <div style="height:72px;display:flex;align-items:center;justify-content:center;border:2px solid #f08a7e;color:#f08a7e;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:28px">Finish now</div>
+      </div>
+    </div>
+  </div>
+</sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:390,&quot;height&quot;:844},&quot;phase&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;countdown&quot;,&quot;warmup&quot;,&quot;hang&quot;,&quot;rest&quot;,&quot;prepare&quot;,&quot;paused&quot;,&quot;confirm&quot;,&quot;done&quot;],&quot;default&quot;:&quot;hang&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;layout&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;flood&quot;,&quot;band&quot;,&quot;rail&quot;],&quot;default&quot;:&quot;flood&quot;,&quot;tsType&quot;:&quot;string&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    const phase = this.props.phase ?? 'hang';
+    const layout = this.props.layout ?? 'flood';
+    const P = {
+      ready: ['var(--ph-ready, oklch(0.76 0.15 70))', 'var(--on-ready, #111213)'],
+      hang: ['var(--ph-hang, oklch(0.93 0.15 125))', 'var(--on-hang, #111213)'],
+      rest: ['var(--ph-rest, oklch(0.34 0.08 250))', 'var(--on-rest, #f4f6f8)'],
+      dark: ['var(--timer-bg,#0e0f10)', 'var(--timer-text,#f4f6f8)'],
+    };
+    const D = {
+      countdown: { c: 'ready', label: 'GET READY', digits: '7', set: 'Warm-up', edge: '20 mm', target: 'Session starts', next: 'Next: warm-up hang 7 s', prog: 30, done: 0, plus: true },
+      warmup: { c: 'hang', label: 'WARM-UP', digits: '4', set: 'Warm-up 2 of 3', edge: '20 mm', target: '7 s · open hand · easy', next: 'Next: rest 0:30', prog: 43, done: 0, plus: false },
+      hang: { c: 'hang', label: 'HANG', digits: '4', set: 'Set 3 of 5', edge: '25 mm', target: 'Target 5 s · half crimp · +5 kg', next: 'Next: rest 2:30', prog: 20, done: 2, plus: false },
+      rest: { c: 'rest', label: 'REST', digits: '2:14', set: 'Set 3 of 5', edge: '25 mm', target: 'Hold the next set: 5 s', next: 'Next: set 4 · 25 mm', prog: 11, done: 3, plus: true, result: true },
+      prepare: { c: 'ready', label: 'NEXT SET', digits: '5', set: 'Set 4 of 5', edge: '25 mm', target: 'Hands on the 25 mm edge', next: 'Next: hang 5 s', prog: 50, done: 3, plus: true },
+      paused: { c: 'dark', label: 'PAUSED', digits: '2:14', set: 'Set 3 of 5', edge: '25 mm', target: 'Rest is on hold', next: 'Next: set 4 · 25 mm', prog: 11, done: 3, plus: true, pause: 'Resume' },
+      confirm: { c: 'rest', label: 'REST', digits: '1:48', set: 'Set 2 of 5', edge: '25 mm', target: 'Hold the next set: 5 s', next: 'Next: set 3 · 25 mm', prog: 28, done: 2, plus: true, confirm: true },
+      done: { c: 'dark', label: 'DONE', digits: '5/5', set: 'Session done', edge: '25 mm', target: 'Time under load 0:46', next: 'Opening summary…', prog: 100, done: 5, plus: false, pause: 'Open summary' },
+    }[phase] || {};
+    const [bg, ink] = P[D.c] || P.hang;
+    const digitSize = (D.digits || '').length > 2 ? '168px' : '220px';
+    return {
+      isFlood: layout === 'flood', isBand: layout === 'band', isRail: layout === 'rail',
+      bg, ink, label: D.label, digits: D.digits, digitSize,
+      setLine: D.set, edge: D.edge, target: D.target, next: D.next,
+      progress: (D.prog ?? 0) + '%',
+      dots: [0, 1, 2, 3, 4].map(i => ({ bg: i < (D.done ?? 0) ? ink : 'transparent' })),
+      showResult: !!D.result && layout === 'flood',
+      showConfirm: !!D.confirm,
+      pauseLabel: D.pause || 'Pause',
+      plusOpacity: D.plus ? 1 : 0.35,
+    };
+  }
+}
+</script>
+</body>
+</html>

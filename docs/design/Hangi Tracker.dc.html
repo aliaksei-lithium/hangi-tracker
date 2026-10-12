@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet><meta name="design_doc_mode" content="canvas"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&amp;display=swap"><link rel="icon" href="assets/favicon.svg"><style>body{margin:0;background:#e6e6e8;color:#1d1f20;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif}a{color:#416180}a:hover{color:#2c455d}.dv-turn{padding:44px 48px 36px;border-bottom:1px solid rgba(0,0,0,.08);scroll-margin-top:16px}.dv-thd{display:flex;align-items:baseline;gap:10px;margin:0 0 8px}.dv-tid{font:600 10px ui-monospace,Menlo,monospace;padding:3px 7px;background:#1d2d3d;color:#fff;border-radius:2px;text-decoration:none}.dv-tname{font:600 26px/1.1 'Barlow Condensed',sans-serif;color:#1d1f20}.dv-sub{font-size:14px;color:#5d5d60;margin:0 0 24px;max-width:760px;line-height:1.5}.dv-opts{display:flex;flex-wrap:wrap;gap:32px;align-items:flex-start}.dv-opt{flex:none;display:flex;flex-direction:column;gap:9px;scroll-margin-top:16px}.dv-oid{font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(0,0,0,.08);color:#1d1f20;border-radius:2px;text-decoration:none}.dv-olabel{display:flex;align-items:baseline;gap:8px;font:400 12px/1.3 system-ui,sans-serif;color:#5d5d60}.dv-card{max-width:100%;background:#fff;border:1px solid rgba(0,0,0,.1);box-shadow:0 1px 3px rgba(0,0,0,.06);overflow:hidden}.dv-opt:target .dv-oid{background:#416180;color:#fff}.dv-next{margin:24px 0 0;font:13px/1.5 system-ui,sans-serif;color:#5d5d60}</style></helmet>
+
+<section class="dv-turn" id="t0" data-screen-label="Overview">
+  <div class="dv-thd"><a class="dv-tid" href="#t0">0</a><span class="dv-tname">Hangi Tracker — design overview</span></div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:32px;max-width:1240px;font-size:14px;line-height:1.55">
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <div style="font:600 18px 'Barlow Condensed',sans-serif">Direction</div>
+      <p style="margin:0;text-wrap:pretty">Built on the Industry system: steel accent, square hairline frames, "+" registration marks on the one hero card, Barlow Condensed for display type and timer digits (the single Google font), system stack for body text. Industry's accent #5980a6 is under 4.5:1 for button labels, so actions use its 700 step (#416180) in light and 400 (#94bce3) in dark.</p>
+      <p style="margin:0;text-wrap:pretty">Corners stay square per Industry; toggles and radios are the only round shapes. If you want the "rounded, not bubbly" note from the brief, set <code>--r-1</code> to 4–6 px on buttons and cards in <a href="tokens.css">tokens.css</a>.</p>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <div style="font:600 18px 'Barlow Condensed',sans-serif">Readable at 2 metres</div>
+      <p style="margin:0;text-wrap:pretty">Digits are Barlow Condensed Bold with tabular figures at 220 px for seconds and 168 px for m:ss. At 2 m that is about 1.3° of visual angle per digit, roughly 4× a comfortable reading size. Condensed glyphs let the digits fill the 390 px width without shrinking. Phase word at 56 px, set and edge at 26–28 px. Digit contrast is 8.8:1 to 15:1 on every phase (AAA).</p>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <div style="font:600 18px 'Barlow Condensed',sans-serif">Phases without colour</div>
+      <p style="margin:0;text-wrap:pretty">1. The phase word is always on screen. 2. Lightness steps: Hang is the lightest field (L 0.93) with dark digits, Get ready is mid (L 0.76), Rest is dark (L 0.34) with light digits; the inversion between Hang and Rest reads even in greyscale (see row <a class="dv-oid" href="#1d">1d</a>). 3. +10 s is dimmed during hangs. 4. Rest is the only phase with the result buttons. 5. Distinct beep patterns and voice prompts per phase (Settings → Timer).</p>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <div style="font:600 18px 'Barlow Condensed',sans-serif">Assumptions</div>
+      <p style="margin:0;text-wrap:pretty">Sample data: Aliaksei, week 6 of 8, 25 mm, 5 × 5 s, rest 2:30, half crimp, +5 kg, sessions Mon/Thu. "Now" is Tue 13 Oct, 26 h after the last session, so Home shows the 48 h banner. Progress is drawn at full scroll length. Status bars and home indicators are simplified.</p>
+    </div>
+  </div>
+</section>
+
+<section class="dv-turn" id="t1" data-screen-label="Timer layouts">
+  <div class="dv-thd"><a class="dv-tid" href="#t1">1</a><span class="dv-tname">Timer — layouts</span></div>
+  <p class="dv-sub">Always dark, no background graphic. <a class="dv-oid" href="#1a">1a</a> is the recommended layout and is shown in every phase; <a class="dv-oid" href="#1b">1b</a> and <a class="dv-oid" href="#1c">1c</a> are alternatives shown in key phases.</p>
+  <div class="dv-opt" id="1a" style="margin-bottom:40px">
+    <div class="dv-olabel"><a class="dv-oid" href="#1a">1a</a>Flood — the whole screen takes the phase colour; controls are drawn in the phase ink</div>
+    <div style="display:flex;flex-wrap:wrap;gap:24px">
+      <div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:#5d5d60">Start countdown</span><div class="dv-card" data-screen-label="Timer countdown"><dc-import name="Timer" phase="countdown" layout="flood" hint-size="390px,844px"></dc-import></div></div>
+      <div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:#5d5d60">Warm-up</span><div class="dv-card"><dc-import name="Timer" phase="warmup" layout="flood" hint-size="390px,844px"></dc-import></div></div>
+      <div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:#5d5d60">Hang</span><div class="dv-card"><dc-import name="Timer" phase="hang" layout="flood" hint-size="390px,844px"></dc-import></div></div>
+      <div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:#5d5d60">Rest + set result</span><div class="dv-card"><dc-import name="Timer" phase="rest" layout="flood" hint-size="390px,844px"></dc-import></div></div>
+      <div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:#5d5d60">Prepare / next set</span><div class="dv-card"><dc-import name="Timer" phase="prepare" layout="flood" hint-size="390px,844px"></dc-import></div></div>
+      <div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:#5d5d60">Paused</span><div class="dv-card"><dc-import name="Timer" phase="paused" layout="flood" hint-size="390px,844px"></dc-import></div></div>
+      <div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:#5d5d60">Finish confirmation</span><div class="dv-card"><dc-import name="Timer" phase="confirm" layout="flood" hint-size="390px,844px"></dc-import></div></div>
+      <div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:#5d5d60">Finish</span><div class="dv-card"><dc-import name="Timer" phase="done" layout="flood" hint-size="390px,844px"></dc-import></div></div>
+    </div>
+  </div>
+  <div class="dv-opts">
+    <div class="dv-opt" id="1b">
+      <div class="dv-olabel"><a class="dv-oid" href="#1b">1b</a>Band — colour holds the phase word and digits; info and controls sit on black</div>
+      <div style="display:flex;gap:24px">
+        <div class="dv-card"><dc-import name="Timer" phase="countdown" layout="band" hint-size="390px,844px"></dc-import></div>
+        <div class="dv-card"><dc-import name="Timer" phase="hang" layout="band" hint-size="390px,844px"></dc-import></div>
+        <div class="dv-card"><dc-import name="Timer" phase="rest" layout="band" hint-size="390px,844px"></dc-import></div>
+      </div>
+    </div>
+    <div class="dv-opt" id="1c">
+      <div class="dv-olabel"><a class="dv-oid" href="#1c">1c</a>Rail — black field, colour only in the header and a vertical fill bar; least glare in a dark room</div>
+      <div style="display:flex;gap:24px">
+        <div class="dv-card"><dc-import name="Timer" phase="countdown" layout="rail" hint-size="390px,844px"></dc-import></div>
+        <div class="dv-card"><dc-import name="Timer" phase="hang" layout="rail" hint-size="390px,844px"></dc-import></div>
+        <div class="dv-card"><dc-import name="Timer" phase="rest" layout="rail" hint-size="390px,844px"></dc-import></div>
+      </div>
+    </div>
+  </div>
+  <p class="dv-next">Try next: "use <a class="dv-oid" href="#1c">1c</a> but with the result buttons from <a class="dv-oid" href="#1a">1a</a>" · "make the digits even bigger on hang" · "show 1b in all phases"</p>
+</section>
+
+<section class="dv-turn" id="t2" data-screen-label="Phase colours">
+  <div class="dv-thd"><a class="dv-tid" href="#t2">2</a><span class="dv-tname">Timer — phase colours</span></div>
+  <p class="dv-sub">Each palette in layout <a class="dv-oid" href="#1a">1a</a> at half size: Get ready, Hang, Rest. The second row is the same frames in greyscale; all three must stay distinct there.</p>
+  <div class="dv-opts">
+    <div class="dv-opt" id="1d">
+      <div class="dv-olabel"><a class="dv-oid" href="#1d">1d</a>Signal — amber / chartreuse / deep steel · L 0.76 / 0.93 / 0.34 · recommended</div>
+      <div style="--ph-ready:oklch(0.76 0.15 70);--ph-hang:oklch(0.93 0.15 125);--ph-rest:oklch(0.34 0.08 250);--on-ready:#111213;--on-hang:#111213;--on-rest:#f4f6f8;display:flex;flex-direction:column;gap:12px">
+        <div style="display:flex;gap:12px;zoom:.5"><div class="dv-card"><dc-import name="Timer" phase="countdown" hint-size="390px,844px"></dc-import></div><div class="dv-card"><dc-import name="Timer" phase="hang" hint-size="390px,844px"></dc-import></div><div class="dv-card"><dc-import name="Timer" phase="rest" hint-size="390px,844px"></dc-import></div></div>
+        <div style="display:flex;gap:12px;zoom:.5;filter:grayscale(1)"><div class="dv-card"><dc-import name="Timer" phase="countdown" hint-size="390px,844px"></dc-import></div><div class="dv-card"><dc-import name="Timer" phase="hang" hint-size="390px,844px"></dc-import></div><div class="dv-card"><dc-import name="Timer" phase="rest" hint-size="390px,844px"></dc-import></div></div>
+      </div>
+    </div>
+    <div class="dv-opt" id="1e">
+      <div class="dv-olabel"><a class="dv-oid" href="#1e">1e</a>Steel mono — one hue, lightness only · closest to Industry</div>
+      <div style="--ph-ready:oklch(0.72 0.09 245);--ph-hang:oklch(0.96 0.015 245);--ph-rest:oklch(0.30 0.05 245);--on-ready:#0f1720;--on-hang:#0f1720;--on-rest:#f4f6f8;display:flex;flex-direction:column;gap:12px">
+        <div style="display:flex;gap:12px;zoom:.5"><div class="dv-card"><dc-import name="Timer" phase="countdown" hint-size="390px,844px"></dc-import></div><div class="dv-card"><dc-import name="Timer" phase="hang" hint-size="390px,844px"></dc-import></div><div class="dv-card"><dc-import name="Timer" phase="rest" hint-size="390px,844px"></dc-import></div></div>
+        <div style="display:flex;gap:12px;zoom:.5;filter:grayscale(1)"><div class="dv-card"><dc-import name="Timer" phase="countdown" hint-size="390px,844px"></dc-import></div><div class="dv-card"><dc-import name="Timer" phase="hang" hint-size="390px,844px"></dc-import></div><div class="dv-card"><dc-import name="Timer" phase="rest" hint-size="390px,844px"></dc-import></div></div>
+      </div>
+    </div>
+    <div class="dv-opt" id="1f">
+      <div class="dv-olabel"><a class="dv-oid" href="#1f">1f</a>Warm — pale yellow / orange / indigo · hang is the "hot" colour</div>
+      <div style="--ph-ready:oklch(0.92 0.11 100);--ph-hang:oklch(0.76 0.16 48);--ph-rest:oklch(0.33 0.10 285);--on-ready:#111213;--on-hang:#111213;--on-rest:#f4f6f8;display:flex;flex-direction:column;gap:12px">
+        <div style="display:flex;gap:12px;zoom:.5"><div class="dv-card"><dc-import name="Timer" phase="countdown" hint-size="390px,844px"></dc-import></div><div class="dv-card"><dc-import name="Timer" phase="hang" hint-size="390px,844px"></dc-import></div><div class="dv-card"><dc-import name="Timer" phase="rest" hint-size="390px,844px"></dc-import></div></div>
+        <div style="display:flex;gap:12px;zoom:.5;filter:grayscale(1)"><div class="dv-card"><dc-import name="Timer" phase="countdown" hint-size="390px,844px"></dc-import></div><div class="dv-card"><dc-import name="Timer" phase="hang" hint-size="390px,844px"></dc-import></div><div class="dv-card"><dc-import name="Timer" phase="rest" hint-size="390px,844px"></dc-import></div></div>
+      </div>
+    </div>
+  </div>
+  <p class="dv-next">Try next: "<a class="dv-oid" href="#1e">1e</a> but with an amber get-ready" · "check <a class="dv-oid" href="#1d">1d</a> under deuteranopia" · "make rest darker"</p>
+</section>
+
+<section class="dv-turn" id="t3" data-screen-label="Screens light">
+  <div class="dv-thd"><a class="dv-tid" href="#t3">3</a><span class="dv-tname">Screens — light</span></div>
+  <div style="--bg:#f2f2f3;--surface:#f8f8f9;--surface-2:#e7e7ea;--text:#1d1f20;--muted:#5d5d60;--divider:rgba(29,31,32,.16);--mark:rgba(29,31,32,.55);--accent:#416180;--accent-tint:#d6ebff;--on-accent:#f8f8f9;--danger:#a3261c;--danger-tint:#fbe9e6;--warning:#6b4a00;--warning-tint:#fbf0d4;--success:#2f6b3a;--bg-graphic:url(assets/bg-topo-light.svg);--shadow-2:0 -4px 16px rgba(43,43,45,.10);--shadow-3:0 12px 32px rgba(43,43,45,.22);display:flex;flex-wrap:wrap;gap:24px;align-items:flex-start">
+    <div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:#5d5d60">Login</span><div class="dv-card" data-screen-label="Login"><dc-import name="App Screen" screen="login" hint-size="390px,844px"></dc-import></div></div>
+    <div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:#5d5d60">Login — wrong password</span><div class="dv-card"><dc-import name="App Screen" screen="loginError" hint-size="390px,844px"></dc-import></div></div>
+    <div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:#5d5d60">Home — 48 h warning</span><div class="dv-card" data-screen-label="Home"><dc-import name="App Screen" screen="homeWarn" hint-size="390px,844px"></dc-import></div></div>
+    <div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:#5d5d60">Session preview — set 4 on another edge</span><div class="dv-card" data-screen-label="Preview"><dc-import name="App Screen" screen="preview" hint-size="390px,844px"></dc-import></div></div>
+    <div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:#5d5d60">Preview — scope dialog on save</span><div class="dv-card"><dc-import name="App Screen" screen="previewScope" hint-size="390px,844px"></dc-import></div></div>
+    <div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:#5d5d60">Session summary</span><div class="dv-card" data-screen-label="Summary"><dc-import name="App Screen" screen="summary" hint-size="390px,844px"></dc-import></div></div>
+    <div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:#5d5d60">Summary — safety message</span><div class="dv-card"><dc-import name="App Screen" screen="summarySafety" hint-size="390px,1000px"></dc-import></div></div>
+    <div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:#5d5d60">Progress — full scroll</span><div class="dv-card" data-screen-label="Progress"><dc-import name="App Screen" screen="progress" hint-size="390px,2400px"></dc-import></div></div>
+    <div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:#5d5d60">Settings</span><div class="dv-card" data-screen-label="Settings"><dc-import name="App Screen" screen="settings" hint-size="390px,844px"></dc-import></div></div>
+    <div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:#5d5d60">Settings → Timer</span><div class="dv-card"><dc-import name="App Screen" screen="timerSettings" hint-size="390px,844px"></dc-import></div></div>
+  </div>
+</section>
+
+<section class="dv-turn" id="t4" data-screen-label="Screens dark">
+  <div class="dv-thd"><a class="dv-tid" href="#t4">4</a><span class="dv-tname">Screens — dark</span></div>
+  <div style="--bg:#141618;--surface:#1c1f22;--surface-2:#26292d;--text:#e8e9ea;--muted:#a0a3a7;--divider:rgba(232,233,234,.14);--mark:rgba(232,233,234,.5);--accent:#94bce3;--accent-tint:#1d2d3d;--on-accent:#10202e;--danger:#f08a7e;--danger-tint:#3a1d1a;--warning:#f2cf7a;--warning-tint:#33290f;--success:#8fd19b;--bg-graphic:url(assets/bg-topo-dark.svg);--shadow-2:0 -1px 0 rgba(255,255,255,.08);--shadow-3:0 0 0 1px rgba(255,255,255,.08),0 16px 40px rgba(0,0,0,.6);display:flex;flex-wrap:wrap;gap:24px;align-items:flex-start">
+    <div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:#5d5d60">Login — error</span><div class="dv-card"><dc-import name="App Screen" screen="loginError" hint-size="390px,844px"></dc-import></div></div>
+    <div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:#5d5d60">Home — no warning</span><div class="dv-card"><dc-import name="App Screen" screen="home" hint-size="390px,844px"></dc-import></div></div>
+    <div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:#5d5d60">Session preview</span><div class="dv-card"><dc-import name="App Screen" screen="preview" hint-size="390px,844px"></dc-import></div></div>
+    <div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:#5d5d60">Scope dialog</span><div class="dv-card"><dc-import name="App Screen" screen="previewScope" hint-size="390px,844px"></dc-import></div></div>
+    <div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:#5d5d60">Summary — safety</span><div class="dv-card"><dc-import name="App Screen" screen="summarySafety" hint-size="390px,1000px"></dc-import></div></div>
+    <div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:#5d5d60">Progress</span><div class="dv-card"><dc-import name="App Screen" screen="progress" hint-size="390px,2400px"></dc-import></div></div>
+    <div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:#5d5d60">Settings</span><div class="dv-card"><dc-import name="App Screen" screen="settings" hint-size="390px,844px"></dc-import></div></div>
+    <div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:#5d5d60">Settings → Timer</span><div class="dv-card"><dc-import name="App Screen" screen="timerSettings" hint-size="390px,844px"></dc-import></div></div>
+  </div>
+</section>
+
+<section class="dv-turn" id="t5" data-screen-label="Background graphic">
+  <div class="dv-thd"><a class="dv-tid" href="#t5">5</a><span class="dv-tname">Background graphic — rock face contours</span></div>
+  <p class="dv-sub">One SVG per theme, stroke only, 3–8 KB each, <code>preserveAspectRatio="xMidYMid slice"</code> so it crops to any zone. Placement: Login — the 300 px hero above the app name, faded at the bottom. Home — a 64 px strip under the status bar, faded at the sides. Nowhere else: Preview, Summary, Progress and Settings are dense, and the Timer never shows it. It never sits under text.</p>
+  <div class="dv-opts">
+    <div class="dv-opt" id="1g"><div class="dv-olabel"><a class="dv-oid" href="#1g">1g</a>Topo — dense isolines · 7.7 KB · used in the screens</div>
+      <div style="display:flex;gap:12px"><div style="width:300px;height:220px;background:#f2f2f3 url(assets/bg-topo-light.svg) center/cover;border:1px solid rgba(0,0,0,.1)"></div><div style="width:300px;height:220px;background:#141618 url(assets/bg-topo-dark.svg) center/cover"></div></div></div>
+    <div class="dv-opt" id="1h"><div class="dv-olabel"><a class="dv-oid" href="#1h">1h</a>Strata — layered rock bands · 2.9 KB · calmest</div>
+      <div style="display:flex;gap:12px"><div style="width:300px;height:220px;background:#f2f2f3 url(assets/bg-strata-light.svg) center/cover;border:1px solid rgba(0,0,0,.1)"></div><div style="width:300px;height:220px;background:#141618 url(assets/bg-strata-dark.svg) center/cover"></div></div></div>
+    <div class="dv-opt" id="1i"><div class="dv-olabel"><a class="dv-oid" href="#1i">1i</a>Survey — sparse contours with Industry registration marks · 3.4 KB</div>
+      <div style="display:flex;gap:12px"><div style="width:300px;height:220px;background:#f2f2f3 url(assets/bg-survey-light.svg) center/cover;border:1px solid rgba(0,0,0,.1)"></div><div style="width:300px;height:220px;background:#141618 url(assets/bg-survey-dark.svg) center/cover"></div></div></div>
+  </div>
+  <p class="dv-next">Try next: "swap the screens to <a class="dv-oid" href="#1i">1i</a>" · "make <a class="dv-oid" href="#1g">1g</a> fainter" · "add the graphic to the empty state of Progress"</p>
+</section>
+
+<section class="dv-turn" id="t6" data-screen-label="Tokens">
+  <div class="dv-thd"><a class="dv-tid" href="#t6">6</a><span class="dv-tname">Tokens</span></div>
+  <p class="dv-sub">Full set in <a href="tokens.css">tokens.css</a> as CSS custom properties: <code>:root</code> for light, <code>[data-theme="dark"]</code> for dark, plus a separate always-dark timer set.</p>
+  <div style="display:flex;flex-wrap:wrap;gap:40px;align-items:flex-start">
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div style="font:600 16px 'Barlow Condensed',sans-serif">Colour — light / dark</div>
+      <div style="display:grid;grid-template-columns:110px 64px 64px;gap:6px 10px;align-items:center;font-size:13px">
+        <span>--bg</span><span style="height:28px;background:#f2f2f3;border:1px solid rgba(0,0,0,.1)"></span><span style="height:28px;background:#141618"></span>
+        <span>--surface</span><span style="height:28px;background:#f8f8f9;border:1px solid rgba(0,0,0,.1)"></span><span style="height:28px;background:#1c1f22"></span>
+        <span>--surface-2</span><span style="height:28px;background:#e7e7ea"></span><span style="height:28px;background:#26292d"></span>
+        <span>--text</span><span style="height:28px;background:#1d1f20"></span><span style="height:28px;background:#e8e9ea"></span>
+        <span>--muted</span><span style="height:28px;background:#5d5d60"></span><span style="height:28px;background:#a0a3a7"></span>
+        <span>--accent</span><span style="height:28px;background:#416180"></span><span style="height:28px;background:#94bce3"></span>
+        <span>--accent-tint</span><span style="height:28px;background:#d6ebff"></span><span style="height:28px;background:#1d2d3d"></span>
+        <span>--danger</span><span style="height:28px;background:#a3261c"></span><span style="height:28px;background:#f08a7e"></span>
+        <span>--warning-tint</span><span style="height:28px;background:#fbf0d4"></span><span style="height:28px;background:#33290f"></span>
+        <span>--success</span><span style="height:28px;background:#2f6b3a"></span><span style="height:28px;background:#8fd19b"></span>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div style="font:600 16px 'Barlow Condensed',sans-serif">Timer phases (<a class="dv-oid" href="#1d">1d</a>)</div>
+      <div style="display:flex;gap:8px">
+        <div style="width:96px;height:120px;background:oklch(0.76 0.15 70);color:#111213;padding:10px;display:flex;flex-direction:column;justify-content:space-between;font-size:12px"><b>--ph-ready</b><span style="font:700 40px 'Barlow Condensed',sans-serif">7</span></div>
+        <div style="width:96px;height:120px;background:oklch(0.93 0.15 125);color:#111213;padding:10px;display:flex;flex-direction:column;justify-content:space-between;font-size:12px"><b>--ph-hang</b><span style="font:700 40px 'Barlow Condensed',sans-serif">4</span></div>
+        <div style="width:96px;height:120px;background:oklch(0.34 0.08 250);color:#f4f6f8;padding:10px;display:flex;flex-direction:column;justify-content:space-between;font-size:12px"><b>--ph-rest</b><span style="font:700 40px 'Barlow Condensed',sans-serif">2:14</span></div>
+        <div style="width:96px;height:120px;background:#0e0f10;color:#f4f6f8;padding:10px;display:flex;flex-direction:column;justify-content:space-between;font-size:12px"><b>--timer-bg</b><span style="font:700 40px 'Barlow Condensed',sans-serif">5/5</span></div>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:6px">
+      <div style="font:600 16px 'Barlow Condensed',sans-serif">Type</div>
+      <div style="font:700 96px/0.9 'Barlow Condensed',sans-serif;font-variant-numeric:tabular-nums">2:30</div><span style="font-size:12px;color:#5d5d60">--fs-timer 168–220 · Barlow Condensed 700 · tnum</span>
+      <div style="font:700 56px/1 'Barlow Condensed',sans-serif;letter-spacing:.06em">HANG</div><span style="font-size:12px;color:#5d5d60">--fs-phase 56</span>
+      <div style="font:600 34px/1.1 'Barlow Condensed',sans-serif">Screen title 34</div>
+      <div style="font:600 26px/1.1 'Barlow Condensed',sans-serif">Card title 26</div>
+      <div style="font-size:20px">Large 20</div><div style="font-size:16px">Body 16 · system stack</div><div style="font-size:14px;color:#5d5d60">Small 14 · muted</div><div style="font-size:12px;letter-spacing:.1em;text-transform:uppercase;font-weight:600;color:#5d5d60">Label 12</div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div style="font:600 16px 'Barlow Condensed',sans-serif">Spacing · radii · elevation</div>
+      <div style="display:flex;align-items:flex-end;gap:10px"><div style="width:4px;height:4px;background:#416180"></div><div style="width:8px;height:8px;background:#416180"></div><div style="width:12px;height:12px;background:#416180"></div><div style="width:16px;height:16px;background:#416180"></div><div style="width:24px;height:24px;background:#416180"></div><div style="width:32px;height:32px;background:#416180"></div><div style="width:48px;height:48px;background:#416180"></div></div>
+      <span style="font-size:12px;color:#5d5d60">4 · 8 · 12 · 16 · 24 · 32 · 48 — 4 pt base; hit target 48, timer controls 72–80</span>
+      <div style="display:flex;gap:12px;padding-top:8px"><div style="width:72px;height:48px;border:1px solid rgba(0,0,0,.2);background:#f8f8f9"></div><div style="width:72px;height:48px;border-radius:2px;background:#f8f8f9;box-shadow:0 1px 2px rgba(43,43,45,.14)"></div><div style="width:72px;height:48px;background:#f8f8f9;box-shadow:0 12px 32px rgba(43,43,45,.22)"></div></div>
+      <span style="font-size:12px;color:#5d5d60">r-0 frames · shadow-1 rows · shadow-3 dialogs/sheets</span>
+    </div>
+  </div>
+</section>
+
+<section class="dv-turn" id="t7" data-screen-label="Components">
+  <div class="dv-thd"><a class="dv-tid" href="#t7">7</a><span class="dv-tname">Components — light</span></div>
+  <div style="background:#f2f2f3;color:#1d1f20;padding:32px;display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:36px;max-width:1300px;border:1px solid rgba(0,0,0,.08)">
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div style="font-size:12px;letter-spacing:.1em;text-transform:uppercase;font-weight:600;color:#5d5d60">Primary button</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;font-size:12px;color:#5d5d60;text-align:center">
+        <div style="display:flex;flex-direction:column;gap:4px"><div style="height:56px;display:flex;align-items:center;justify-content:center;background:#416180;color:#f8f8f9;font:600 20px 'Barlow Condensed',sans-serif">Start</div>Default</div>
+        <div style="display:flex;flex-direction:column;gap:4px"><div style="height:56px;display:flex;align-items:center;justify-content:center;background:#2c455d;color:#f8f8f9;font:600 20px 'Barlow Condensed',sans-serif">Start</div>Pressed</div>
+        <div style="display:flex;flex-direction:column;gap:4px"><div style="height:56px;display:flex;align-items:center;justify-content:center;background:#416180;color:#f8f8f9;opacity:.45;font:600 20px 'Barlow Condensed',sans-serif">Start</div>Disabled</div>
+      </div>
+      <div style="font-size:12px;letter-spacing:.1em;text-transform:uppercase;font-weight:600;color:#5d5d60;padding-top:8px">Secondary button</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;font-size:12px;color:#5d5d60;text-align:center">
+        <div style="display:flex;flex-direction:column;gap:4px"><div style="height:56px;display:flex;align-items:center;justify-content:center;border:1px solid rgba(29,31,32,.16);color:#1d1f20;font:600 20px 'Barlow Condensed',sans-serif">Edit</div>Default</div>
+        <div style="display:flex;flex-direction:column;gap:4px"><div style="height:56px;display:flex;align-items:center;justify-content:center;border:1px solid rgba(29,31,32,.16);background:rgba(29,31,32,.12);color:#1d1f20;font:600 20px 'Barlow Condensed',sans-serif">Edit</div>Pressed</div>
+        <div style="display:flex;flex-direction:column;gap:4px"><div style="height:56px;display:flex;align-items:center;justify-content:center;border:1px solid rgba(29,31,32,.16);color:#1d1f20;opacity:.45;font:600 20px 'Barlow Condensed',sans-serif">Edit</div>Disabled</div>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div style="font-size:12px;letter-spacing:.1em;text-transform:uppercase;font-weight:600;color:#5d5d60">Number stepper</div>
+      <div style="display:grid;grid-template-columns:48px 1fr 48px;align-items:center;background:#e7e7ea;max-width:200px"><span style="height:48px;display:flex;align-items:center;justify-content:center;font-size:22px">−</span><span style="text-align:center;font-weight:600;font-variant-numeric:tabular-nums">2:30</span><span style="height:48px;display:flex;align-items:center;justify-content:center;font-size:22px;background:#d4d4d7">+</span></div>
+      <span style="font-size:12px;color:#5d5d60">+ shown pressed · long-press repeats · 15 s steps for rest, 1 s for hang</span>
+      <div style="font-size:12px;letter-spacing:.1em;text-transform:uppercase;font-weight:600;color:#5d5d60;padding-top:8px">Toggle</div>
+      <div style="display:flex;gap:16px;align-items:center">
+        <div style="width:52px;height:32px;border-radius:999px;background:#416180;display:flex;justify-content:flex-end;padding:3px"><div style="width:26px;height:26px;border-radius:50%;background:#f8f8f9"></div></div>
+        <div style="width:52px;height:32px;border-radius:999px;background:#e7e7ea;display:flex;justify-content:flex-start;padding:3px"><div style="width:26px;height:26px;border-radius:50%;background:#5d5d60"></div></div>
+        <span style="font-size:12px;color:#5d5d60">On · Off — whole row is the 48 px target</span>
+      </div>
+      <div style="font-size:12px;letter-spacing:.1em;text-transform:uppercase;font-weight:600;color:#5d5d60;padding-top:8px">Chip</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px"><div style="min-height:40px;display:flex;align-items:center;padding:0 14px;border:1px solid #416180;background:#d6ebff;font-weight:600;font-size:15px">Pulley</div><div style="min-height:40px;display:flex;align-items:center;padding:0 14px;border:1px solid rgba(29,31,32,.16);font-size:15px">Forearm</div><div style="padding:3px 10px;background:#d6ebff;font-size:13px;font-weight:600;align-self:center">Full</div></div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div style="font-size:12px;letter-spacing:.1em;text-transform:uppercase;font-weight:600;color:#5d5d60">Card (blueprint frame)</div>
+      <div style="position:relative;border:1px solid rgba(29,31,32,.16);padding:16px;display:flex;flex-direction:column;gap:8px;margin:6px">
+        <i style="position:absolute;top:-6px;left:-6px;width:11px;height:11px;background:linear-gradient(rgba(29,31,32,.55),rgba(29,31,32,.55)) 5px 0/1px 100% no-repeat,linear-gradient(rgba(29,31,32,.55),rgba(29,31,32,.55)) 0 5px/100% 1px no-repeat"></i>
+        <i style="position:absolute;top:-6px;right:-6px;width:11px;height:11px;background:linear-gradient(rgba(29,31,32,.55),rgba(29,31,32,.55)) 5px 0/1px 100% no-repeat,linear-gradient(rgba(29,31,32,.55),rgba(29,31,32,.55)) 0 5px/100% 1px no-repeat"></i>
+        <i style="position:absolute;bottom:-6px;left:-6px;width:11px;height:11px;background:linear-gradient(rgba(29,31,32,.55),rgba(29,31,32,.55)) 5px 0/1px 100% no-repeat,linear-gradient(rgba(29,31,32,.55),rgba(29,31,32,.55)) 0 5px/100% 1px no-repeat"></i>
+        <i style="position:absolute;bottom:-6px;right:-6px;width:11px;height:11px;background:linear-gradient(rgba(29,31,32,.55),rgba(29,31,32,.55)) 5px 0/1px 100% no-repeat,linear-gradient(rgba(29,31,32,.55),rgba(29,31,32,.55)) 0 5px/100% 1px no-repeat"></i>
+        <span style="font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:#416180;font-weight:600">Kicker</span><span style="font:600 26px/1.1 'Barlow Condensed',sans-serif">Card title</span><span style="font-size:15px;color:#5d5d60">Marks only on the hero card per screen; other groups are plain hairline lists.</span>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div style="font-size:12px;letter-spacing:.1em;text-transform:uppercase;font-weight:600;color:#5d5d60">Banners</div>
+      <div style="display:flex;gap:12px;padding:12px 14px;background:#fbf0d4;color:#6b4a00;font-size:15px;line-height:1.4"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" style="flex:none"><path d="M12 3l10 18H2z"></path><path d="M12 10v4M12 17h.01"></path></svg><span><strong>Warning.</strong> Last session was 26 hours ago.</span></div>
+      <div style="display:flex;flex-direction:column;gap:4px;padding:14px;background:#fbe9e6;border:1px solid #a3261c;font-size:15px"><span style="color:#a3261c;font-weight:700;display:flex;gap:8px;align-items:center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v6M12 16h.01"></path></svg>Stop training for today</span><span>Safety — bordered, never dismissible by tapping outside.</span></div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div style="font-size:12px;letter-spacing:.1em;text-transform:uppercase;font-weight:600;color:#5d5d60">Text field</div>
+      <label style="display:flex;flex-direction:column;gap:6px;font-size:14px;color:#5d5d60">Name<div style="height:52px;display:flex;align-items:center;padding:0 14px;background:#f8f8f9;border:1px solid rgba(29,31,32,.16);color:#1d1f20;font-size:17px">aliaksei</div></label>
+      <label style="display:flex;flex-direction:column;gap:6px;font-size:14px;color:#5d5d60">Focused<div style="height:52px;display:flex;align-items:center;padding:0 14px;background:#f8f8f9;border:1px solid #416180;outline:2px solid #416180;outline-offset:0;color:#1d1f20;font-size:17px">aliak|</div></label>
+      <label style="display:flex;flex-direction:column;gap:6px;font-size:14px;color:#5d5d60">Error<div style="height:52px;display:flex;align-items:center;padding:0 14px;background:#f8f8f9;border:1px solid #a3261c;color:#1d1f20;font-size:20px;letter-spacing:.2em">••••••</div><span style="color:#a3261c">Password is incorrect.</span></label>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div style="font-size:12px;letter-spacing:.1em;text-transform:uppercase;font-weight:600;color:#5d5d60">Bottom navigation</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid rgba(29,31,32,.16);border-bottom:1px solid rgba(29,31,32,.16)">
+        <div style="height:60px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;color:#416180;font-size:12px;font-weight:600;box-shadow:inset 0 2px 0 #416180"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M3 10l9-7 9 7v10a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"></path></svg>Home</div>
+        <div style="height:60px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;color:#5d5d60;font-size:12px"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 20V11M10 20V5M16 20v-6M2 20h20"></path></svg>Progress</div>
+        <div style="height:60px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;color:#5d5d60;font-size:12px"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1"></path><circle cx="15" cy="6" r="2"></circle><circle cx="9" cy="12" r="2"></circle><circle cx="17" cy="18" r="2"></circle></svg>Settings</div>
+      </div>
+      <span style="font-size:12px;color:#5d5d60">Active = accent, heavier stroke, top rule (not colour alone)</span>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div style="font-size:12px;letter-spacing:.1em;text-transform:uppercase;font-weight:600;color:#5d5d60">Dialog — reset data</div>
+      <div style="background:#f8f8f9;box-shadow:0 12px 32px rgba(43,43,45,.22);padding:20px;display:flex;flex-direction:column;gap:12px">
+        <span style="font:600 26px/1.1 'Barlow Condensed',sans-serif">Reset all data?</span>
+        <span style="font-size:15px;color:#5d5d60">Sessions, plan and settings are deleted on this phone and on the server. Export first if you want a copy.</span>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><div style="height:52px;display:flex;align-items:center;justify-content:center;border:1px solid rgba(29,31,32,.16);font:600 20px 'Barlow Condensed',sans-serif">Cancel</div><div style="height:52px;display:flex;align-items:center;justify-content:center;background:#a3261c;color:#fff;font:600 20px 'Barlow Condensed',sans-serif">Reset</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="dv-turn" id="t8" data-screen-label="Icons">
+  <div class="dv-thd"><a class="dv-tid" href="#t8">8</a><span class="dv-tname">PWA icon and favicon</span></div>
+  <p class="dv-sub">The pentagon training ring: five edge slots around the centre hole, hung from a cord in the hang-phase chartreuse; pale steel on deep steel (Industry accent-900). The favicon drops the slots so it stays legible at 16 px. The mark sits inside the central 80% circle, so any maskable crop keeps it whole. Files: <a href="assets/icon-512.svg">icon-512.svg</a> (export a 512 PNG for the manifest) and <a href="assets/favicon.svg">favicon.svg</a>.</p>
+  <div style="display:flex;flex-wrap:wrap;gap:40px;align-items:flex-end">
+    <div style="display:flex;flex-direction:column;gap:6px"><div style="position:relative;width:256px;height:256px"><img src="assets/icon-512.svg" width="256" height="256" alt="" style="display:block"><div style="position:absolute;inset:25.6px;border:1px dashed rgba(255,255,255,.5);border-radius:50%"></div></div><span style="font-size:12px;color:#5d5d60">512 px · dashed = maskable safe zone</span></div>
+    <div style="display:flex;flex-direction:column;gap:6px"><img src="assets/icon-512.svg" width="128" height="128" alt="" style="display:block;border-radius:50%"><span style="font-size:12px;color:#5d5d60">Circle mask</span></div>
+    <div style="display:flex;flex-direction:column;gap:6px"><img src="assets/icon-512.svg" width="128" height="128" alt="" style="display:block;border-radius:28px"><span style="font-size:12px;color:#5d5d60">iOS squircle</span></div>
+    <div style="display:flex;flex-direction:column;gap:6px"><div style="display:flex;gap:12px;align-items:flex-end"><img src="assets/favicon.svg" width="32" height="32" alt=""><img src="assets/favicon.svg" width="16" height="16" alt=""></div><span style="font-size:12px;color:#5d5d60">Favicon 32 · 16</span></div>
+  </div>
+</section>
+</x-dc>
+</body>
+</html>

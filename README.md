@@ -5,3 +5,4 @@ simple name + password login.
 
 - Build plan: [docs/PLAN.md](docs/PLAN.md)
 - Prompt for the Design Agent: [docs/DESIGN_PROMPT.md](docs/DESIGN_PROMPT.md)
+- Design handoff (screens, tokens, assets): [docs/design/](docs/design/README.md)
