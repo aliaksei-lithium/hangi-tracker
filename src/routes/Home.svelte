@@ -1,43 +1,111 @@
 <script lang="ts">
   import type { User } from '../lib/api';
+  import { daysBetween, formatShortDate, toIsoDate, WEEKDAY_NAMES, weekday } from '../lib/domain/dates';
+  import { nextSession, sessionSummary, tooSoonHours, upcomingSessions } from '../lib/domain/plan';
+  import type { HangSession, Plan, PlannedSession, Settings } from '../lib/domain/types';
   import { greeting } from '../lib/greeting';
   import Frame from '../lib/ui/Frame.svelte';
 
-  let { user }: { user: User } = $props();
+  let {
+    user,
+    plan,
+    sessions,
+    hangSessions,
+    settings,
+    onOpen,
+  }: {
+    user: User;
+    plan: Plan;
+    sessions: PlannedSession[];
+    hangSessions: HangSession[];
+    settings: Settings;
+    onOpen: (id: string) => void;
+  } = $props();
 
-  // Re-evaluate the greeting every minute so it changes from afternoon to evening while open.
+  // Re-evaluate time-based text every minute, so the greeting changes while the app is open.
   let now = $state(new Date());
   $effect(() => {
     const id = setInterval(() => (now = new Date()), 60_000);
     return () => clearInterval(id);
   });
+
+  const next = $derived(nextSession(sessions));
+  const upcoming = $derived(upcomingSessions(sessions, 2));
+  const soon = $derived(tooSoonHours(hangSessions, settings.schedule.minGapHours, now));
+  const lastDone = $derived(
+    [...hangSessions].sort((a, b) => b.datetime.localeCompare(a.datetime))[0] ?? null,
+  );
+  const typeLabel = (t: string) => (t === 'full' ? 'Full' : 'Light');
+  const NUMBERS = ['no', 'one', 'two', 'three', 'four', 'five', 'six'];
+
+  const lead = $derived.by(() => {
+    if (!next) return 'The plan is complete. A new plan comes with a later update.';
+    const days = daysBetween(toIsoDate(now), next.date);
+    const kind = `${next.type} session`;
+    if (days < 0) return `Your ${kind} from ${WEEKDAY_NAMES[weekday(next.date)]} is still open. Do it when you are rested.`;
+    if (days === 0) return `Next up is a ${kind} today.`;
+    if (days === 1) return `Next up is a ${kind} tomorrow.`;
+    const when = days < 7 ? `on ${WEEKDAY_NAMES[weekday(next.date)]}` : `on ${formatShortDate(next.date)}`;
+    if (hangSessions.length === 0) return `Next up is a ${kind} ${when}.`;
+    const rest = days - 1;
+    return `Next up is a ${kind} ${when}. Fingers get ${NUMBERS[rest] ?? rest} more rest day${rest === 1 ? '' : 's'}.`;
+  });
+  const overdue = $derived(next ? daysBetween(toIsoDate(now), next.date) < 0 : false);
 </script>
 
 <div class="strip" aria-hidden="true"></div>
 <div class="content">
   <header>
     <h1 class="display">{greeting(user.displayName, now)}</h1>
-    <p>Your training plan comes in the next update. The card below shows how a session will look.</p>
+    <p>{lead}</p>
   </header>
 
-  <!-- Placeholder until phase 2 generates the plan. Values are a sample from the design. -->
-  <Frame>
-    <div class="card-head eyebrow">
-      <span class="accent">Next session</span><span>Sample</span>
+  {#if soon !== null}
+    <div class="notice notice-warning" role="status">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M12 3l10 18H2z"></path><path d="M12 10v4M12 17h.01"></path></svg>
+      <span><strong>Last session was {soon} hours ago.</strong> Leave at least {settings.schedule.minGapHours} hours between sessions.</span>
     </div>
-    <div class="when">
-      <span class="display date">Week 1</span>
-      <span class="chip">Full</span>
-    </div>
-    <div class="spec">20 mm · 5 × 5 s · rest 3:00 · warm-up on</div>
-    <div class="actions">
-      <button class="btn btn-primary" disabled>
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4l13 8-13 8z"></path></svg>
-        Start session
-      </button>
-      <button class="btn btn-secondary" disabled>Edit</button>
-    </div>
-  </Frame>
+  {/if}
+
+  {#if next}
+    <Frame>
+      <div class="card-head eyebrow">
+        <span class="accent">Next session</span><span>Week {next.week} of {plan.weeks}</span>
+      </div>
+      <div class="when">
+        <span class="display date">{formatShortDate(next.date)}</span>
+        <span class="chip">{typeLabel(next.type)}</span>
+        {#if overdue}<span class="chip warn">Overdue</span>{/if}
+      </div>
+      <div class="spec">{sessionSummary(next)}</div>
+      <div class="actions">
+        <button class="btn btn-primary" onclick={() => onOpen(next.id)}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4l13 8-13 8z"></path></svg>
+          Start session
+        </button>
+        <button class="btn btn-secondary" onclick={() => onOpen(next.id)}>Edit</button>
+      </div>
+    </Frame>
+  {/if}
+
+  <div class="lists">
+    {#if upcoming.length}
+      <div class="eyebrow list-title">Upcoming</div>
+      {#each upcoming as s (s.id)}
+        <button class="item" onclick={() => onOpen(s.id)}>
+          <span><strong>{formatShortDate(s.date)}</strong> · {typeLabel(s.type)}</span>
+          <span class="muted">{s.sets[0]?.edgeMm} mm · {s.sets.length} × {s.sets[0]?.hangSec} s</span>
+        </button>
+      {/each}
+    {/if}
+    {#if lastDone}
+      <div class="eyebrow list-title gap">Last completed</div>
+      <div class="item static">
+        <span><strong>{formatShortDate(toIsoDate(new Date(lastDone.datetime)))}</strong></span>
+        <span class="muted">{lastDone.sets.filter((s) => s.completed).length}/{lastDone.sets.length}</span>
+      </div>
+    {/if}
+  </div>
 </div>
 
 <style>
@@ -54,11 +122,20 @@
   header { display: flex; flex-direction: column; gap: 6px; }
   h1 { margin: 0; font-size: var(--fs-2xl); line-height: 1.05; }
   header p { margin: 0; color: var(--muted); }
+  .notice strong { font-weight: 600; }
   .card-head { display: flex; justify-content: space-between; align-items: center; }
   .accent { color: var(--accent); }
   .when { display: flex; align-items: center; gap: 10px; }
   .date { font-size: 30px; line-height: 1; }
   .chip { padding: 3px 10px; background: var(--accent-tint); color: var(--text); font-size: 13px; font-weight: 600; border-radius: var(--r-1); }
+  .chip.warn { background: var(--warning-tint); color: var(--warning); }
   .spec { font-size: 17px; }
   .actions { display: grid; grid-template-columns: 1fr 104px; gap: var(--sp-2); padding-top: var(--sp-1); }
+  .lists { display: flex; flex-direction: column; }
+  .list-title { padding-bottom: var(--sp-1); }
+  .list-title.gap { padding-top: var(--sp-5); }
+  .item { min-height: 52px; display: flex; align-items: center; justify-content: space-between; gap: 12px; border: 0; border-bottom: 1px solid var(--divider); background: transparent; padding: 0; text-align: left; }
+  .item.static { border-bottom: 0; }
+  .item strong { font-weight: 600; }
+  .muted { color: var(--muted); }
 </style>

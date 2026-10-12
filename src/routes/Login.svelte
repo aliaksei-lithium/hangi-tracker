@@ -1,7 +1,7 @@
 <script lang="ts">
   import { login, NetworkError, type User } from '../lib/api';
 
-  let { onLogin }: { onLogin: (user: User) => void } = $props();
+  let { onLogin }: { onLogin: (user: User) => Promise<void> } = $props();
 
   let password = $state('');
   let visible = $state(false);
@@ -15,7 +15,7 @@
     error = null;
     try {
       const user = await login(password);
-      if (user) onLogin(user);
+      if (user) await onLogin(user);
       else error = 'Password is incorrect.';
     } catch (e) {
       error = e instanceof NetworkError ? 'No connection. Try again when you are online.' : 'Something went wrong. Try again.';
