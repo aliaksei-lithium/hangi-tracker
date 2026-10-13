@@ -1,8 +1,25 @@
+import { execSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 import { svelte } from '@sveltejs/vite-plugin-svelte';
 import { VitePWA } from 'vite-plugin-pwa';
 import { defineConfig } from 'vitest/config';
 
+// Shown in Settings: package version plus the commit, for example "0.2.0 · 1a2b3c4".
+function appVersion(): string {
+  const { version } = JSON.parse(readFileSync('package.json', 'utf8'));
+  let sha = process.env.GITHUB_SHA?.slice(0, 7);
+  try {
+    sha ??= execSync('git rev-parse --short HEAD').toString().trim();
+  } catch {
+    sha = 'local';
+  }
+  return `${version} · ${sha}`;
+}
+
 export default defineConfig({
+  define: {
+    __APP_VERSION__: JSON.stringify(appVersion()),
+  },
   plugins: [
     svelte(),
     // Service worker: precaches the app shell so the app opens offline.

@@ -220,6 +220,8 @@
     <div>{user.displayName}</div>
     <button class="btn btn-secondary" onclick={onLogout}>Log out</button>
   </section>
+
+  <p class="muted small version">Version {__APP_VERSION__}</p>
 </div>
 
 {#if pendingImport}
@@ -281,6 +283,7 @@
   .data-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
   .data-actions .btn { font-size: 20px; height: 52px; }
   .hidden { display: none; }
+  .version { text-align: center; }
   .link { min-height: 48px; border: 0; background: transparent; font-weight: 600; font-size: 15px; padding: 0; align-self: flex-start; }
   .danger { color: var(--danger); }
   .scrim { position: fixed; inset: 0; background: rgba(14, 15, 16, 0.55); display: flex; align-items: flex-end; justify-content: center; z-index: 10; }
