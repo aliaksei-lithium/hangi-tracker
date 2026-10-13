@@ -20,7 +20,8 @@ Decisions taken without the owner (change any of them):
 - Middle values where the doc gives ranges (see PLAN.md 5a).
 - Edge and hang time are two small charts, not one chart with two scales.
 
-Not deployed yet. The session was not allowed to run production commands. Run:
+Deployed on 2026-10-13 by the owner: https://hangi-tracker.aliaksei-zhynhiarouski.workers.dev
+The steps used (for a fresh setup):
 
 ```
 npx wrangler d1 migrations apply hangi-tracker --remote
