@@ -175,8 +175,9 @@
 
   async function updateHangSession(s: HangSession) {
     if (!data || !store) return;
-    await store.saveHangSession(s);
+    // Update the screen first: the next quick tap builds on this change, not on the old record.
     data.hangSessions = data.hangSessions.map((x) => (x.id === s.id ? s : x));
+    await store.saveHangSession(s);
   }
 
   function openNewEntry() {

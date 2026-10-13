@@ -318,7 +318,7 @@
   .segmented button { height: 48px; border: 0; background: transparent; font-size: 15px; }
   .segmented button + button { border-left: 1px solid var(--divider); }
   .segmented .sel { background: var(--accent); color: var(--on-accent); font-weight: 600; }
-  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; }
   select { height: 48px; padding: 0 12px; border: 1px solid var(--divider); border-radius: var(--r-1); background: var(--bg); font: inherit; font-size: 15px; color: var(--text); }
   .editor-actions { display: flex; justify-content: space-between; margin: 0 -12px; }
   .add { height: 56px; padding: 0; }

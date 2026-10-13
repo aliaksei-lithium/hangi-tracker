@@ -209,7 +209,8 @@
   .k { font-size: 13px; color: var(--muted); }
   .v { font-size: 26px; font-variant-numeric: tabular-nums; }
   .sub { font-size: 12px; color: var(--muted); }
-  .volume { display: flex; justify-content: space-between; padding: 12px; border: 1px solid var(--divider); }
+  .volume { display: flex; justify-content: space-between; gap: 12px; padding: 12px; border: 1px solid var(--divider); }
+  .volume > span:last-child { white-space: nowrap; }
   .volume strong { font-weight: 600; font-variant-numeric: tabular-nums; }
   .legend { display: flex; flex-wrap: wrap; gap: 16px; font-size: 13px; color: var(--muted); }
   .legend span { display: flex; align-items: center; gap: 6px; }

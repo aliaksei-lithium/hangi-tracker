@@ -96,7 +96,7 @@
   .chips button { min-height: 40px; padding: 0 14px; border: 1px solid var(--divider); background: transparent; font-size: 15px; border-radius: var(--r-1); }
   .chips .sel { border-color: var(--accent); background: var(--accent-tint); font-weight: 600; }
   .pop { min-height: 52px; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-top: 4px; font-size: 15px; }
-  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .two { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; }
   .field { display: flex; flex-direction: column; gap: 6px; }
   .add { height: 48px; border: 1px dashed var(--divider); background: transparent; color: var(--accent); font-weight: 600; border-radius: var(--r-1); }
   input { height: 48px; padding: 0 12px; background: var(--surface); border: 1px solid var(--divider); border-radius: var(--r-1); font-size: 15px; min-width: 0; }
