@@ -390,3 +390,23 @@ export function resetToPlan(session: PlannedSession, settings: Settings): Planne
     status: session.status === 'done' ? 'done' : 'planned',
   };
 }
+
+/**
+ * One-time upgrade for data saved before "this and all next" changed the plan.
+ * Back then such an edit marked every later session "modified". When all open
+ * sessions of a type are modified (and none has plan values yet), that was a plan
+ * change: their values become the plan values. Other sessions stay as they are.
+ */
+export function adoptPlanEdits(sessions: PlannedSession[]): PlannedSession[] {
+  const adopt = new Set<SessionType>();
+  for (const type of ['full', 'light'] as const) {
+    const open = sessions.filter((s) => s.type === type && isOpen(s));
+    if (open.length > 1 && open.every((s) => s.status === 'modified' && !s.baseSets)) adopt.add(type);
+  }
+  if (adopt.size === 0) return sessions;
+  return sessions.map((s) =>
+    adopt.has(s.type) && isOpen(s)
+      ? { ...s, baseSets: s.sets.map((x) => ({ ...x })), baseWarmup: s.warmup, status: 'planned' }
+      : s,
+  );
+}

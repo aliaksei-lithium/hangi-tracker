@@ -13,6 +13,7 @@ import {
   tooSoonHours,
   upcomingSessions,
   withDefaults,
+  adoptPlanEdits,
 } from '../src/lib/domain/plan';
 import type { PlannedSession } from '../src/lib/domain/types';
 
@@ -245,5 +246,31 @@ describe('flexible schedule', () => {
       ],
       minGapHours: 36,
     });
+  });
+});
+
+describe('adoptPlanEdits', () => {
+  // Like real data saved before 0.5.0: every full session edited, light ones not.
+  const edited = sessions.map((s) =>
+    s.type === 'full' ? { ...s, status: 'modified' as const, sets: s.sets.map((x) => ({ ...x, hangSec: x.hangSec + 1, restSec: 120 })) } : s,
+  );
+
+  it('turns a change on every open session of a type into the plan', () => {
+    const out = adoptPlanEdits(edited);
+    const w1 = out.find((s) => s.id === 'p1:w1:full')!;
+    expect(w1.status).toBe('planned');
+    expect(resetToPlan(w1, settings).sets[0]).toMatchObject({ edgeMm: 25, hangSec: 6, restSec: 120 });
+    // Light sessions were not changed and stay as they are.
+    expect(out.find((s) => s.id === 'p1:w1:light')).toEqual(edited.find((s) => s.id === 'p1:w1:light'));
+  });
+
+  it('leaves one-off changes alone', () => {
+    const oneOff = sessions.map((s) => (s.id === 'p1:w2:full' ? { ...s, status: 'modified' as const } : s));
+    expect(adoptPlanEdits(oneOff)).toBe(oneOff);
+  });
+
+  it('does nothing twice', () => {
+    const once = adoptPlanEdits(edited);
+    expect(adoptPlanEdits(once)).toBe(once);
   });
 });

@@ -3,7 +3,7 @@
 
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
 import { toIsoDate } from '../domain/dates';
-import { generatePlan, withDefaults } from '../domain/plan';
+import { adoptPlanEdits, generatePlan, withDefaults } from '../domain/plan';
 import type { HangSession, Plan, PlannedSession, Settings } from '../domain/types';
 import { withSessionDefaults, type DocContent } from './doc';
 
@@ -71,6 +71,14 @@ export class Store {
       changed = true;
     } else {
       sessions = await this.db.getAll('plannedSessions');
+      // Upgrade "this and all next" edits saved before they changed the plan.
+      const upgraded = adoptPlanEdits(sessions);
+      if (upgraded !== sessions) {
+        const tx = this.db.transaction('plannedSessions', 'readwrite');
+        await Promise.all([...upgraded.filter((s, i) => s !== sessions[i]).map((s) => tx.store.put(s)), tx.done]);
+        sessions = upgraded;
+        changed = true;
+      }
     }
     const hangSessions = (await this.db.getAll('hangSessions')).map(withSessionDefaults);
     if (changed) await this.changed();
