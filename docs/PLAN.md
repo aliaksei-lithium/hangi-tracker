@@ -184,6 +184,10 @@ product: log in, be greeted, run a session.
   (`baseSets`), so "Reset to plan" keeps the suggestion. Handled suggestions are kept
   in `plan.handled`. "Repeat last week" adds one week at the end.
 - Phase 7: sub-screens use browser history for the back gesture.
+- Guest mode: "Try it without an account" opens the app with sample data in a
+  separate local database, with no server calls. A shared demo password was rejected
+  (visitors would overwrite each other's data). Open registration would need name +
+  password login, Turnstile and rate limits; not built.
 - Weekly schedule: any set of weekdays, each full or light (one session per day).
   A plan week is a 7-day block from the first full day. A new schedule keeps done
   sessions, keeps the open sessions of a started week on new dates, and rebuilds the

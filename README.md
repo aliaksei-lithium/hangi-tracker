@@ -26,8 +26,10 @@ Hangi Tracker is a small web app for finger training on a hangboard. It plans an
 metres away, saves the result and shows your progress. It installs on the phone's
 home screen and keeps working without a network.
 
-**Live:** https://hangi-tracker.aliaksei-zhynhiarouski.workers.dev (on a phone, use
-"Add to Home Screen" to install it like an app).
+**Try it:** open https://hangi-tracker.aliaksei-zhynhiarouski.workers.dev and tap
+**Try it without an account**. You get a plan with four weeks of sample history; it
+stays in your browser and nothing is sent to a server. On a phone, use "Add to Home
+Screen" to install it like an app.
 
 ## What it does
 
@@ -55,6 +57,7 @@ home screen and keeps working without a network.
   A sharp pain, click or pop shows a safety message.
 - **Your data, everywhere.** Works offline, syncs to your account when online, and
   exports to a JSON file you can import again. Light and dark theme.
+- **Try before an account.** Guest mode with sample data, kept only in the browser.
 
 ## Screenshots
 
@@ -74,7 +77,7 @@ home screen and keeps working without a network.
 | Offline | Installable PWA (service worker), IndexedDB as the working store |
 | Server | One Cloudflare Worker: serves the app and a small JSON API |
 | Database | Cloudflare D1 (SQLite): users and one data snapshot per user |
-| Login | Password only, PBKDF2 hashes, signed HttpOnly cookie |
+| Login | Password only, PBKDF2 hashes, signed HttpOnly cookie; guest mode without an account |
 | Timer | Pure TypeScript, computed from timestamps, beeps scheduled on the Web Audio clock |
 | Charts | Hand-drawn SVG, no chart library |
 | Tests | Vitest for the plan, timer, sync and progress logic |

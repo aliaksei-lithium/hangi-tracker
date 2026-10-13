@@ -1,7 +1,7 @@
 <script lang="ts">
   import { login, NetworkError, type User } from '../lib/api';
 
-  let { onLogin }: { onLogin: (user: User) => Promise<void> } = $props();
+  let { onLogin, onGuest }: { onLogin: (user: User) => Promise<void>; onGuest: () => Promise<void> } = $props();
 
   let password = $state('');
   let visible = $state(false);
@@ -74,6 +74,10 @@
     <button class="btn btn-primary" type="submit" disabled={busy || !password}>
       {busy ? 'Checking…' : 'Log in'}
     </button>
+    <button class="guest" type="button" onclick={onGuest}>
+      <span>Try it without an account</span>
+      <span class="sub">Sample data. Stays in this browser.</span>
+    </button>
   </div>
 </form>
 
@@ -133,4 +137,6 @@
   }
   .notice { margin-top: 10px; }
   .spacer { flex: 1; }
+  .guest { margin-top: calc(-1 * var(--sp-2)); min-height: 56px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; border: 0; background: transparent; color: var(--accent); font-weight: 600; font-size: 16px; }
+  .guest .sub { color: var(--muted); font-weight: 400; font-size: 13px; }
 </style>

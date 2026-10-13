@@ -6,6 +6,7 @@
   import type { EditScope, HangSession, PlannedSession, ScheduleDay, Settings } from './lib/domain/types';
   import ScheduleSheet from './lib/ui/ScheduleSheet.svelte';
   import { Store, type Snapshot } from './lib/store/db';
+  import { demoContent } from './lib/domain/demo';
   import { DocError, parseDoc, toDoc } from './lib/store/doc';
   import { Sync, type SyncStatus } from './lib/store/sync';
   import { applySchedule, extraSession, findSuggestions, moveSession, moveToEdge, restartAfterBreak, skipNext, stepBack, type Suggestion } from './lib/domain/suggest';
@@ -30,6 +31,10 @@
 
   // The last user is kept so the app opens offline. It holds only the name.
   const LAST_USER = 'hangi-tracker:lastUser';
+  // Guest mode: no account, sample data, everything stays in this browser.
+  const GUEST = 'hangi-tracker:guest';
+  // "~" cannot appear in a real login name, so the guest database never clashes.
+  const GUEST_USER: User = { name: '~guest', displayName: 'Guest' };
 
   let user = $state<User | null>(null);
   let checked = $state(false);
@@ -40,6 +45,7 @@
   let syncedAt = $state<string | null>(null);
   let store: Store | null = null;
   let sync: Sync | null = null;
+  let guest = $state(false);
 
   function readLastUser(): User | null {
     try {
@@ -54,11 +60,15 @@
     try {
       const u = await fetchMe();
       if (u) await enter(u, true);
-      else localStorage.removeItem(LAST_USER);
+      else {
+        localStorage.removeItem(LAST_USER);
+        if (localStorage.getItem(GUEST)) await enterGuest();
+      }
     } catch (e) {
       if (!(e instanceof NetworkError)) throw e;
       const last = readLastUser();
-      if (last) await enter(last, false);
+      if (localStorage.getItem(GUEST)) await enterGuest();
+      else if (last) await enter(last, false);
       else offlineNoUser = true;
     } finally {
       checked = true;
@@ -68,6 +78,8 @@
 
   async function enter(u: User, online: boolean) {
     leave();
+    guest = false;
+    localStorage.removeItem(GUEST);
     localStorage.setItem(LAST_USER, JSON.stringify(u));
     store = await Store.open(u.name);
     sync = new Sync(store, {
@@ -90,6 +102,20 @@
     view = { name: 'home' };
   }
 
+  /** Guest mode: a local store with sample data on first use, and no server sync. */
+  async function enterGuest() {
+    leave();
+    localStorage.setItem(GUEST, '1');
+    store = await Store.open(GUEST_USER.name);
+    const empty = await store.snapshot().then(() => false, () => true);
+    if (empty) await store.replaceAll(demoContent(toIsoDate(new Date())), { rev: 0 });
+    data = await store.load();
+    guest = true;
+    syncStatus = 'idle';
+    user = GUEST_USER;
+    view = { name: 'home' };
+  }
+
   function leave() {
     sync?.stop();
     store?.close();
@@ -103,6 +129,14 @@
   }
 
   async function doLogout() {
+    if (guest) {
+      // The guest data stays in this browser for next time.
+      localStorage.removeItem(GUEST);
+      guest = false;
+      leave();
+      user = null;
+      return;
+    }
     await logout().catch(() => {});
     localStorage.removeItem(LAST_USER);
     leave();
@@ -303,11 +337,13 @@
 
   async function resetData() {
     if (!store) return;
-    await store.clearAll();
+    if (guest) await store.replaceAll(demoContent(toIsoDate(new Date())), { rev: 0 });
+    else await store.clearAll();
     await reload();
   }
 
   const syncLine = $derived.by(() => {
+    if (guest) return 'Guest mode: your data stays in this browser and is not saved on a server. Export it to keep a copy.';
     switch (syncStatus) {
       case 'offline':
         return 'Offline. Changes are kept on this device and sent when you are online.';
@@ -381,7 +417,7 @@
     <button class="btn btn-secondary" onclick={check}>Try again</button>
   </div>
 {:else if !user || !data}
-  <Login onLogin={(u) => enter(u, true)} />
+  <Login onLogin={(u) => enter(u, true)} onGuest={enterGuest} />
 {:else if view.name === 'preview' && current}
   <main>
     <Preview
@@ -429,6 +465,7 @@
     {#if view.name === 'settings'}
       <SettingsView
         {user}
+        {guest}
         settings={data.settings}
         {syncLine}
         onChange={changeSettings}
@@ -443,6 +480,8 @@
     {:else}
       <Home
         {user}
+        {guest}
+        onLeaveGuest={doLogout}
         plan={data.plan}
         sessions={data.sessions}
         hangSessions={data.hangSessions}

@@ -11,6 +11,7 @@
     user,
     settings,
     syncLine,
+    guest = false,
     onChange,
     onSchedule,
     onLogout,
@@ -21,6 +22,7 @@
     user: User;
     settings: Settings;
     syncLine: string;
+    guest?: boolean;
     onChange: (settings: Settings) => void;
     onSchedule: () => void;
     onLogout: () => void;
@@ -214,8 +216,8 @@
 
   <section>
     <h2 class="eyebrow">Signed in as</h2>
-    <div>{user.displayName}</div>
-    <button class="btn btn-secondary" onclick={onLogout}>Log out</button>
+    <div>{guest ? 'Guest (no account)' : user.displayName}</div>
+    <button class="btn btn-secondary" onclick={onLogout}>{guest ? 'Leave guest mode' : 'Log out'}</button>
   </section>
 
   <p class="muted small version">Version {__APP_VERSION__}</p>

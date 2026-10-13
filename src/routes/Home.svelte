@@ -20,6 +20,8 @@
     onOpen,
     onExtra,
     onSchedule,
+    guest = false,
+    onLeaveGuest,
   }: {
     user: User;
     plan: Plan;
@@ -31,6 +33,8 @@
     onOpen: (id: string) => void;
     onExtra: (type: 'full' | 'light') => void;
     onSchedule: () => void;
+    guest?: boolean;
+    onLeaveGuest: () => void;
   } = $props();
 
   let extraSheet = $state(false);
@@ -72,6 +76,12 @@
   const overdue = $derived(next ? daysBetween(toIsoDate(now), next.date) < 0 : false);
 </script>
 
+{#if guest}
+  <div class="guest-bar">
+    <span><strong>Guest mode.</strong> Sample data, stays in this browser.</span>
+    <button onclick={onLeaveGuest}>Log in</button>
+  </div>
+{/if}
 <div class="strip" aria-hidden="true"></div>
 <div class="content">
   <header>
@@ -189,6 +199,9 @@
   .item.static { border-bottom: 0; }
   .item strong { font-weight: 600; }
   .muted { color: var(--muted); }
+  .guest-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px var(--sp-5); background: var(--accent-tint); font-size: 14px; }
+  .guest-bar strong { font-weight: 600; }
+  .guest-bar button { min-height: 40px; border: 0; background: transparent; color: var(--accent); font-weight: 600; font-size: 14px; padding: 0; flex: none; }
   .row-links { display: flex; flex-direction: column; align-items: flex-start; margin-top: -4px; }
   .link { min-height: 44px; display: inline-flex; align-items: center; gap: 8px; border: 0; background: transparent; padding: 0; color: var(--accent); font-weight: 600; font-size: 15px; text-align: left; }
   .muted-link { color: var(--muted); font-weight: 400; font-size: var(--fs-sm); min-height: 36px; }
