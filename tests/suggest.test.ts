@@ -165,6 +165,14 @@ describe('extraSession', () => {
     expect(extra.id.startsWith('extra:')).toBe(true);
     expect(planned.some((s) => s.id === extra.id)).toBe(false);
   });
+
+  it('uses the changed values of the next session', () => {
+    const next = byId(sessions, 'p1:w1:full');
+    const changed = sessions.map((s) => (s.id === next.id ? { ...s, warmup: false, sets: s.sets.map((x) => ({ ...x, edgeMm: 20 })) } : s));
+    const extra = extraSession(changed, settings, 'full', '2026-10-13');
+    expect(extra.sets.every((x) => x.edgeMm === 20)).toBe(true);
+    expect(extra.warmup).toBe(false);
+  });
 });
 
 describe('applySchedule', () => {

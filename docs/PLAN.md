@@ -168,6 +168,10 @@ product: log in, be greeted, run a session.
 - Phase 2: where the requirements give a range, the middle is used (full rest 2:30;
   light sessions 3 sets in weeks 1-4, 4 sets in weeks 5-8). Week 1 starts on the first
   full-session day on or after the day the plan is created.
+- "This and all next" changes the plan (2026-10-14): the edited session's values become
+  its plan values, later open sessions of the same type get the change in their plan,
+  and "Reset to plan", a new schedule and "repeat last week" keep it. "Only this
+  session" stays a one-off change. "Train now" uses the next session's current values.
 - "This and all next" carries only session-wide changes to later sessions of the same
   type. Hang time and set count carry as a difference, so the progression keeps its
   shape; edge, rest, grip and weight carry as the value. A change to one set stays local.

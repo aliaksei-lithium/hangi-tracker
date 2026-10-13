@@ -308,8 +308,8 @@ export function isEmptyPatch(p: SessionPatch): boolean {
   );
 }
 
-export function applyPatch(session: PlannedSession, patch: SessionPatch): PlannedSession {
-  let sets = session.sets.map((s) => ({
+function patchSets(sets: SetSpec[], patch: SessionPatch): SetSpec[] {
+  let out = sets.map((s) => ({
     ...s,
     hangSec: Math.max(1, s.hangSec + patch.hangDelta),
     ...(patch.edgeMm !== undefined && { edgeMm: patch.edgeMm }),
@@ -317,33 +317,62 @@ export function applyPatch(session: PlannedSession, patch: SessionPatch): Planne
     ...(patch.grip !== undefined && { grip: patch.grip }),
     ...(patch.addedKg !== undefined && { addedKg: patch.addedKg }),
   }));
-  if (patch.setDelta > 0 && sets.length > 0) {
-    const last = sets[sets.length - 1];
-    sets = [...sets, ...Array.from({ length: patch.setDelta }, () => ({ ...last }))];
+  if (patch.setDelta > 0 && out.length > 0) {
+    const last = out[out.length - 1];
+    out = [...out, ...Array.from({ length: patch.setDelta }, () => ({ ...last }))];
   } else if (patch.setDelta < 0) {
-    sets = sets.slice(0, Math.max(1, sets.length + patch.setDelta));
+    out = out.slice(0, Math.max(1, out.length + patch.setDelta));
   }
-  return { ...session, warmup: patch.warmup ?? session.warmup, sets, status: 'modified' };
+  return out;
 }
 
+export function applyPatch(session: PlannedSession, patch: SessionPatch): PlannedSession {
+  return { ...session, warmup: patch.warmup ?? session.warmup, sets: patchSets(session.sets, patch), status: 'modified' };
+}
+
+const clone = (sets: SetSpec[]) => sets.map((x) => ({ ...x }));
+const sameSets = (a: SetSpec[], b: SetSpec[]) => JSON.stringify(a) === JSON.stringify(b);
+
 /**
- * Saves an edited session. With scope 'all', the session-wide part of the change is
- * also applied to every later open session of the same type. Returns all sessions.
+ * Saves an edited session.
+ * - 'this': a one-off change. The session is marked modified; its plan stays.
+ * - 'all': a change of the plan. The edited session's values become its plan, and the
+ *   session-wide part of the change is applied to the plan of every later open session
+ *   of the same type. "Reset to plan", a new schedule and "repeat last week" keep it.
+ *   A later session that had its own one-off change keeps that change on top.
  */
 export function saveEdit(
   sessions: PlannedSession[],
   edited: PlannedSession,
   scope: EditScope,
+  settings: Settings,
 ): PlannedSession[] {
   const before = sessions.find((s) => s.id === edited.id);
   if (!before) throw new Error(`unknown session ${edited.id}`);
-  const saved: PlannedSession = { ...edited, status: edited.status === 'done' ? 'done' : 'modified' };
-  const diff = scope === 'all' ? diffSessions(before, edited) : null;
-  const patch = diff && !isEmptyPatch(diff) ? diff : null;
+  const done = edited.status === 'done';
+  if (scope === 'this') {
+    const saved: PlannedSession = { ...edited, status: done ? 'done' : 'modified' };
+    return sessions.map((s) => (s.id === edited.id ? saved : s));
+  }
+
+  const saved: PlannedSession = {
+    ...edited,
+    baseSets: clone(edited.sets),
+    baseWarmup: edited.warmup,
+    status: done ? 'done' : 'planned',
+  };
+  const diff = diffSessions(before, edited);
+  const patch = isEmptyPatch(diff) ? null : diff;
   return sessions.map((s) => {
     if (s.id === edited.id) return saved;
-    if (patch && s.type === edited.type && s.date > edited.date && isOpen(s)) return applyPatch(s, patch);
-    return s;
+    if (!patch || s.type !== edited.type || s.date <= edited.date || !isOpen(s)) return s;
+    const oldBase = baseSetsOf(s, settings);
+    const baseSets = patchSets(oldBase, patch);
+    const baseWarmup = patch.warmup ?? s.baseWarmup ?? settings.protocol.warmupOn;
+    const oneOff = s.status === 'modified' && (!sameSets(s.sets, oldBase) || s.warmup !== (s.baseWarmup ?? settings.protocol.warmupOn));
+    return oneOff
+      ? { ...s, sets: patchSets(s.sets, patch), warmup: patch.warmup ?? s.warmup, baseSets, baseWarmup, status: 'modified' }
+      : { ...s, sets: clone(baseSets), warmup: baseWarmup, baseSets, baseWarmup, status: 'planned' };
   });
 }
 

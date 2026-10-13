@@ -3,7 +3,7 @@
 // plan only changes after Accept. Nothing here is medical advice.
 
 import { addDays, daysBetween, toIsoDate } from './dates';
-import { baseSetsOf, firstTrainingDay, generateWeeks, sortSessions, stepForWeek } from './plan';
+import { baseSetsOf, firstTrainingDay, generateWeeks, planSets, sortSessions, stepForWeek } from './plan';
 import { weekOf } from './progress';
 import { EDGES_MM, type HangSession, type Plan, type PlannedSession, type SetSpec, type Settings } from './types';
 
@@ -246,19 +246,20 @@ export function moveSession(sessions: PlannedSession[], id: string, newDate: str
 }
 
 /**
- * A one-off session outside the plan. It takes the values of the next open session of
- * that type, so it fits where you are in the plan. It is never stored in the plan.
+ * A one-off session outside the plan. It takes the current values of the next open
+ * session of that type (with your changes), so it fits where you are in the plan.
+ * It is never stored in the plan.
  */
 export function extraSession(sessions: PlannedSession[], settings: Settings, type: 'full' | 'light', today: string): PlannedSession {
   const next = sortSessions(sessions).find((s) => s.type === type && isOpen(s));
   const source = next ?? [...sortSessions(sessions)].reverse().find((s) => s.type === type);
-  const sets = source ? baseSetsOf(source, settings) : [];
+  const sets = source ? (next ? source.sets : baseSetsOf(source, settings)) : planSets(settings, type, 1);
   return {
     id: `extra:${today}:${type}`,
     week: source?.week ?? 1,
     type,
     date: today,
-    warmup: settings.protocol.warmupOn,
+    warmup: next?.warmup ?? settings.protocol.warmupOn,
     sets: sets.map((x) => ({ ...x })),
     status: 'planned',
   };

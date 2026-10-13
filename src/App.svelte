@@ -148,7 +148,7 @@
   async function saveSession(draft: PlannedSession, scope: EditScope, remember: boolean) {
     if (!data || !store) return;
     const before = $state.snapshot(data.sessions);
-    const after = saveEdit(before, draft, scope);
+    const after = saveEdit(before, draft, scope, $state.snapshot(data.settings));
     const changed = after.filter((s, i) => s !== before[i]);
     await store.saveSessions(changed);
     data.sessions = after;

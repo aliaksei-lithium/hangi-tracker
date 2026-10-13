@@ -120,7 +120,7 @@ describe('saveEdit', () => {
 
   it('with scope "this" changes only the edited session', () => {
     const edited = { ...w2, sets: w2.sets.map((s) => ({ ...s, restSec: 180 })) };
-    const out = saveEdit(sessions, edited, 'this');
+    const out = saveEdit(sessions, edited, 'this', settings);
     expect(out.find((s) => s.id === w2.id)!.status).toBe('modified');
     expect(out.find((s) => s.id === w2.id)!.sets[0].restSec).toBe(180);
     expect(out.find((s) => s.id === 'p1:w3:full')!.sets[0].restSec).toBe(150);
@@ -129,13 +129,19 @@ describe('saveEdit', () => {
 
   it('with scope "all" carries session-wide values to later sessions of the same type', () => {
     const edited = { ...w2, warmup: false, sets: w2.sets.map((s) => ({ ...s, restSec: 180, edgeMm: 20 })) };
-    const out = saveEdit(sessions, edited, 'all');
+    const out = saveEdit(sessions, edited, 'all', settings);
     for (const id of ['p1:w3:full', 'p1:w8:full']) {
       const s = out.find((x) => x.id === id)!;
       expect(s.sets.every((x) => x.restSec === 180 && x.edgeMm === 20)).toBe(true);
       expect(s.warmup).toBe(false);
-      expect(s.status).toBe('modified');
+      // It is now the plan, not a one-off change.
+      expect(s.status).toBe('planned');
+      expect(resetToPlan(s, settings).sets).toEqual(s.sets);
+      expect(resetToPlan(s, settings).warmup).toBe(false);
     }
+    const saved = out.find((x) => x.id === w2.id)!;
+    expect(saved.status).toBe('planned');
+    expect(saved.baseSets).toEqual(saved.sets);
     // Earlier sessions and the other type stay as planned.
     expect(out.find((s) => s.id === 'p1:w1:full')!.sets[0].restSec).toBe(150);
     expect(out.find((s) => s.id === 'p1:w3:light')!.sets[0].restSec).toBe(120);
@@ -143,7 +149,7 @@ describe('saveEdit', () => {
 
   it('carries hang time and set count as a difference, keeping the progression', () => {
     const edited = { ...w2, sets: [...w2.sets, { ...w2.sets[0] }].map((s) => ({ ...s, hangSec: s.hangSec + 1 })) };
-    const out = saveEdit(sessions, edited, 'all');
+    const out = saveEdit(sessions, edited, 'all', settings);
     expect(shape(out.find((s) => s.id === 'p1:w3:full')!)).toBe('25mm 6x7s');
     expect(shape(out.find((s) => s.id === 'p1:w7:full')!)).toBe('25mm 8x8s');
   });
@@ -151,14 +157,33 @@ describe('saveEdit', () => {
   it('keeps a change to one set in this session only', () => {
     const edited = { ...w2, sets: w2.sets.map((s, i) => (i === 2 ? { ...s, edgeMm: 20 } : s)) };
     expect(diffSessions(w2, edited)).toEqual({ setDelta: 0, hangDelta: 0 });
-    const out = saveEdit(sessions, edited, 'all');
+    const out = saveEdit(sessions, edited, 'all', settings);
     expect(out.find((s) => s.id === 'p1:w3:full')!.status).toBe('planned');
+  });
+
+  it('keeps a one-off change of a later session on top of the new plan', () => {
+    const w4 = byId('p1:w4:full');
+    const oneOff = saveEdit(sessions, { ...w4, sets: w4.sets.slice(0, 3) }, 'this', settings);
+    const edited = { ...w2, sets: w2.sets.map((s) => ({ ...s, restSec: 180 })) };
+    const out = saveEdit(oneOff, edited, 'all', settings);
+    const s4 = out.find((s) => s.id === w4.id)!;
+    expect(s4.status).toBe('modified');
+    expect(s4.sets).toHaveLength(3); // the one-off change stays
+    expect(s4.sets[0].restSec).toBe(180); // and gets the plan change
+    expect(s4.baseSets).toHaveLength(6); // the plan itself has 6 sets
+    expect(resetToPlan(s4, settings).sets.map((x) => x.restSec)).toEqual([180, 180, 180, 180, 180, 180]);
+  });
+
+  it('with scope "this" keeps the plan for reset', () => {
+    const edited = { ...w2, sets: w2.sets.map((s) => ({ ...s, restSec: 180 })) };
+    const s = saveEdit(sessions, edited, 'this', settings).find((x) => x.id === w2.id)!;
+    expect(resetToPlan(s, settings).sets[0].restSec).toBe(150);
   });
 
   it('does not touch done sessions', () => {
     const withDone = sessions.map((s) => (s.id === 'p1:w3:full' ? { ...s, status: 'done' as const } : s));
     const edited = { ...w2, sets: w2.sets.map((s) => ({ ...s, restSec: 180 })) };
-    const out = saveEdit(withDone, edited, 'all');
+    const out = saveEdit(withDone, edited, 'all', settings);
     expect(out.find((s) => s.id === 'p1:w3:full')!.sets[0].restSec).toBe(150);
     expect(out.find((s) => s.id === 'p1:w4:full')!.sets[0].restSec).toBe(180);
   });

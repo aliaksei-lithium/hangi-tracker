@@ -246,7 +246,7 @@
           </label>
         </div>
         {#if scope === 'all'}
-          <p class="muted small hint">Changes to a single set stay in this session. Hang time and sets change by the same amount in later weeks.</p>
+          <p class="muted small hint">This changes your plan: later {draft.type} sessions follow, and “Reset to plan” keeps the new values. Hang time and sets change by the same amount in later weeks.</p>
         {/if}
         <label class="remember"><input type="checkbox" bind:checked={remember} /> Remember my choice</label>
         <div class="sheet-actions">
