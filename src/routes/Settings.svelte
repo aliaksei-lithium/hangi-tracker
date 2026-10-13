@@ -3,7 +3,6 @@
   import { player } from '../lib/audio/player';
   import type { User } from '../lib/api';
   import { formatDuration } from '../lib/domain/plan';
-  import { WEEKDAY_NAMES } from '../lib/domain/dates';
   import { EDGES_MM, type EditScope, type Settings } from '../lib/domain/types';
   import Stepper from '../lib/ui/Stepper.svelte';
   import Switch from '../lib/ui/Switch.svelte';
@@ -13,6 +12,7 @@
     settings,
     syncLine,
     onChange,
+    onSchedule,
     onLogout,
     onExport,
     onImport,
@@ -22,6 +22,7 @@
     settings: Settings;
     syncLine: string;
     onChange: (settings: Settings) => void;
+    onSchedule: () => void;
     onLogout: () => void;
     onExport: () => void;
     onImport: (file: File) => Promise<string | null>;
@@ -58,8 +59,13 @@
     { value: 'all', label: 'This and all next sessions' },
   ];
 
-  // Monday first, like the calendar.
-  const DAYS = [1, 2, 3, 4, 5, 6, 0];
+  const SHORT_DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const scheduleText = $derived(
+    [...settings.schedule.days]
+      .sort((a, b) => ((a.day + 6) % 7) - ((b.day + 6) % 7))
+      .map((d) => `${SHORT_DAYS[d.day]} ${d.type}`)
+      .join(', '),
+  );
   const THEMES = [
     { value: 'system', label: 'System' },
     { value: 'light', label: 'Light' },
@@ -135,23 +141,14 @@
     <h2 class="eyebrow">Schedule</h2>
     <div class="rows">
       <div class="row">
-        <span class="text"><span>Full session</span></span>
-        <select class="select" aria-label="Full session day" bind:value={draft.schedule.fullDay}>
-          {#each DAYS as d (d)}<option value={d} disabled={d === draft.schedule.lightDay}>{WEEKDAY_NAMES[d]}</option>{/each}
-        </select>
-      </div>
-      <div class="row">
-        <span class="text"><span>Light session</span></span>
-        <select class="select" aria-label="Light session day" bind:value={draft.schedule.lightDay}>
-          {#each DAYS as d (d)}<option value={d} disabled={d === draft.schedule.fullDay}>{WEEKDAY_NAMES[d]}</option>{/each}
-        </select>
+        <span class="text"><span>Training days</span><span class="sub">{scheduleText}</span></span>
+        <button class="btn btn-secondary change" onclick={onSchedule}>Change</button>
       </div>
       <div class="row">
         <span class="text"><span>Minimum gap</span><span class="sub">A warning, not a block</span></span>
         <div class="step"><Stepper label="Minimum gap" bind:value={draft.schedule.minGapHours} step={12} min={24} max={96} format={(v) => `${v} h`} /></div>
       </div>
     </div>
-    <p class="muted small">Changing the days moves the open sessions to the new days, from today.</p>
   </section>
 
   <section>
@@ -269,6 +266,7 @@
   /* The row text already names the stepper. */
   .step :global(.label) { display: none; }
   .test { height: 52px; font-size: 20px; }
+  .change { height: 44px; font-size: 18px; flex: none; }
   .select { height: 48px; min-width: 140px; padding: 0 10px; background: var(--surface); border: 1px solid var(--divider); border-radius: var(--r-1); font: inherit; font-size: 15px; color: var(--text); }
   .segmented { display: grid; grid-template-columns: repeat(3, 1fr); border: 1px solid var(--divider); }
   .segmented button { height: 48px; border: 0; background: transparent; font-size: 15px; }

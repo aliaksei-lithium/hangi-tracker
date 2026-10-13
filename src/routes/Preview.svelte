@@ -16,6 +16,7 @@
     onBack,
     onStart,
     onMove,
+    onSchedule,
     extra = false,
   }: {
     session: PlannedSession;
@@ -26,6 +27,8 @@
     /** Gets the session as edited; for a planned session it equals the saved one. */
     onStart: (session: PlannedSession) => void;
     onMove: (date: string, shiftNext: boolean) => Promise<void>;
+    /** Opens the weekly schedule. */
+    onSchedule: () => void;
     /** A one-off session outside the plan: edits are not saved, there is no date to change. */
     extra?: boolean;
   } = $props();
@@ -278,6 +281,16 @@
         <button class="btn btn-secondary" onclick={() => (dateSheet = false)}>Cancel</button>
         <button class="btn btn-primary" disabled={saving || !newDate || shiftDays === 0} onclick={moveDate}>Save</button>
       </div>
+      <button
+        class="link schedule-link"
+        onclick={() => {
+          dateSheet = false;
+          onSchedule();
+        }}
+      >
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="1"></rect><path d="M3 10h18M8 3v4M16 3v4"></path></svg>
+        Change weekly schedule
+      </button>
     </div>
   </div>
 {/if}
@@ -293,6 +306,7 @@
   .meta { font-size: var(--fs-sm); color: var(--muted); display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
   .inline-link { border: 0; background: transparent; padding: 0; min-height: 32px; color: var(--accent); font-weight: 600; font-size: var(--fs-sm); }
   .sheet p { margin: 0; }
+  .schedule-link { padding: 0; align-self: flex-start; }
   .date-field { display: flex; flex-direction: column; gap: 6px; }
   .date-field input { height: 48px; padding: 0 10px; background: var(--bg); border: 1px solid var(--divider); border-radius: var(--r-1); font: inherit; color: var(--text); }
   .titlebar { display: flex; align-items: baseline; justify-content: space-between; }

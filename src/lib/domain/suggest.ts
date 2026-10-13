@@ -3,7 +3,7 @@
 // plan only changes after Accept. Nothing here is medical advice.
 
 import { addDays, daysBetween, toIsoDate } from './dates';
-import { baseSetsOf, nextWeekday, sortSessions, stepForWeek } from './plan';
+import { baseSetsOf, firstTrainingDay, generateWeeks, sortSessions, stepForWeek } from './plan';
 import { weekOf } from './progress';
 import { EDGES_MM, type HangSession, type Plan, type PlannedSession, type SetSpec, type Settings } from './types';
 
@@ -148,18 +148,75 @@ export function skipNext(sessions: PlannedSession[]): PlannedSession[] {
   return sessions.map((s) => (s.id === next?.id ? { ...s, status: 'skipped' } : s));
 }
 
-/** Gives open sessions new dates from today on, on the schedule days, in plan order. */
-export function redate(sessions: PlannedSession[], settings: Settings, today: string): PlannedSession[] {
-  const open = sortSessions(sessions).filter(isOpen);
-  const dates = new Map<string, string>();
-  let cursor = today;
-  for (const s of open) {
-    const day = s.type === 'full' ? settings.schedule.fullDay : settings.schedule.lightDay;
-    const date = nextWeekday(cursor, day);
-    dates.set(s.id, date);
-    cursor = addDays(date, 1);
+/** Training days from `from` on, in date order, for about a year. */
+function upcomingSlots(settings: Settings, from: string): { date: string; type: 'full' | 'light' }[] {
+  const out: { date: string; type: 'full' | 'light' }[] = [];
+  const byDay = new Map(settings.schedule.days.map((d) => [d.day, d.type]));
+  for (let i = 0; i < 400 && byDay.size > 0; i++) {
+    const date = addDays(from, i);
+    const type = byDay.get(new Date(`${date}T00:00:00Z`).getUTCDay());
+    if (type) out.push({ date, type });
   }
-  return sessions.map((s) => (dates.has(s.id) ? { ...s, date: dates.get(s.id)! } : s));
+  return out;
+}
+
+/**
+ * Gives open sessions new dates from `from` on, in plan order: each takes the next
+ * training day of its own type.
+ */
+export function redate(sessions: PlannedSession[], settings: Settings, from: string): PlannedSession[] {
+  const slots = upcomingSlots(settings, from);
+  const dates = new Map<string, string>();
+  let cursor = 0;
+  for (const s of sortSessions(sessions).filter(isOpen)) {
+    let i = cursor;
+    while (i < slots.length && slots[i].type !== s.type) i++;
+    if (i >= slots.length) break; // no day of this type in the schedule: keep the old date
+    dates.set(s.id, slots[i].date);
+    cursor = i + 1;
+  }
+  return sessions.map((x) => (dates.has(x.id) ? { ...x, date: dates.get(x.id)! } : x));
+}
+
+/**
+ * Applies a new weekly schedule. Done and skipped sessions stay. A week that is
+ * already started keeps its open sessions (on new dates); the weeks after it are
+ * built again on the new days, from `from` on. Plan values from accepted suggestions
+ * are kept; one-off edits to open sessions are dropped. `tag` makes the new ids unique.
+ */
+export function applySchedule(
+  sessions: PlannedSession[],
+  settings: Settings,
+  plan: Plan,
+  from: string,
+  tag: string,
+): { sessions: PlannedSession[]; removed: string[] } {
+  const open = sortSessions(sessions).filter(isOpen);
+  if (open.length === 0 || settings.schedule.days.length === 0) return { sessions, removed: [] };
+  const firstWeek = Math.min(...open.map((s) => s.week));
+  const started = sessions.some((s) => s.week === firstWeek && !isOpen(s));
+  const rebuildFrom = started ? firstWeek + 1 : firstWeek;
+  const removedList = open.filter((s) => s.week >= rebuildFrom);
+  const removed = new Set(removedList.map((s) => s.id));
+
+  const kept = redate(
+    sessions.filter((s) => !removed.has(s.id)),
+    settings,
+    from,
+  );
+  const keptOpen = kept.filter((s) => isOpen(s) && !removed.has(s.id));
+  const lastKept = keptOpen.map((s) => s.date).sort().at(-1);
+  const start = firstTrainingDay(settings.schedule.days, lastKept ? addDays(lastKept, 1) : from);
+
+  // Keep accepted-suggestion values, matched by week, type and order within the week.
+  const carry = (week: number, type: 'full' | 'light', n: number) => {
+    const same = removedList.filter((s) => s.week === week && s.type === type && s.baseSets);
+    const old = same[n - 1] ?? same[0];
+    return old ? { baseSets: old.baseSets, baseWarmup: old.baseWarmup } : null;
+  };
+  const toWeek = Math.max(plan.weeks, ...removedList.map((s) => s.week));
+  const fresh = generateWeeks(settings, `${plan.id}${tag}`, start, rebuildFrom, toWeek, carry);
+  return { sessions: [...kept, ...fresh], removed: [...removed] };
 }
 
 /** After a long break: go back one week and continue from today. */

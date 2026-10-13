@@ -68,7 +68,7 @@ describe('generatePlan', () => {
   });
 
   it('handles a light day earlier in the week than the full day', () => {
-    const s = { ...settings, schedule: { ...settings.schedule, fullDay: 4, lightDay: 1 } };
+    const s = { ...settings, schedule: { ...settings.schedule, days: [{ day: 4, type: 'full' as const }, { day: 1, type: 'light' as const }] } };
     const g = generatePlan(s, '2026-10-13', 'p');
     expect(g.sessions[0].date).toBe('2026-10-15'); // Thursday
     expect(g.sessions[1].date).toBe('2026-10-19'); // following Monday
@@ -182,5 +182,43 @@ describe('withDefaults', () => {
     const merged = withDefaults(old as never);
     expect(merged.timer.voice).toBe(true);
     expect(merged.timer.countdownSec).toBe(10);
+  });
+});
+
+describe('flexible schedule', () => {
+  const mwf = {
+    ...settings,
+    schedule: {
+      ...settings.schedule,
+      days: [
+        { day: 1, type: 'full' as const },
+        { day: 3, type: 'light' as const },
+        { day: 5, type: 'full' as const },
+      ],
+    },
+  };
+
+  it('makes one session per schedule day, starting on a full day', () => {
+    const g = generatePlan(mwf, '2026-10-13', 'p'); // Tuesday
+    expect(g.plan.startDate).toBe('2026-10-16'); // Friday, the first full day
+    const w1 = g.sessions.filter((s) => s.week === 1);
+    expect(w1.map((s) => [s.id, s.date])).toEqual([
+      ['p:w1:full', '2026-10-16'],
+      ['p:w1:full2', '2026-10-19'],
+      ['p:w1:light', '2026-10-21'],
+    ]);
+    expect(g.sessions).toHaveLength(24);
+    expect(new Set(g.sessions.map((s) => s.id)).size).toBe(24);
+  });
+
+  it('reads the schedule of older versions', () => {
+    const old = { ...defaultSettings(), schedule: { fullDay: 2, lightDay: 5, minGapHours: 36 } } as never;
+    expect(withDefaults(old).schedule).toEqual({
+      days: [
+        { day: 2, type: 'full' },
+        { day: 5, type: 'light' },
+      ],
+      minGapHours: 36,
+    });
   });
 });

@@ -8,6 +8,11 @@ export type EditScope = 'this' | 'all';
 
 export const EDGES_MM = [15, 20, 25, 30] as const;
 
+export interface ScheduleDay {
+  day: number; // 0 = Sunday ... 6 = Saturday, like Date.getDay()
+  type: SessionType;
+}
+
 export interface SetSpec {
   edgeMm: number;
   hangSec: number;
@@ -67,8 +72,8 @@ export interface Settings {
     grip: Grip;
   };
   schedule: {
-    fullDay: number; // 0 = Sunday ... 6 = Saturday, like Date.getDay()
-    lightDay: number;
+    /** Training days of the week and the session type on each. One session per day. */
+    days: ScheduleDay[];
     minGapHours: number;
   };
   timer: {

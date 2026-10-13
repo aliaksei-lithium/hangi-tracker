@@ -184,6 +184,10 @@ product: log in, be greeted, run a session.
   (`baseSets`), so "Reset to plan" keeps the suggestion. Handled suggestions are kept
   in `plan.handled`. "Repeat last week" adds one week at the end.
 - Phase 7: sub-screens use browser history for the back gesture.
+- Weekly schedule: any set of weekdays, each full or light (one session per day).
+  A plan week is a 7-day block from the first full day. A new schedule keeps done
+  sessions, keeps the open sessions of a started week on new dates, and rebuilds the
+  later weeks; accepted-suggestion values are carried over, one-off edits are not.
 
 ## 6. Setup checklist (one-time, by the owner)
 

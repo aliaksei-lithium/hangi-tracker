@@ -3,11 +3,12 @@
   import { addDays, toIsoDate } from './lib/domain/dates';
   import { newEntry, plannedChangesOnDelete, plannedChangesOnSave } from './lib/domain/log';
   import { nextSession, resetToPlan, saveEdit } from './lib/domain/plan';
-  import type { EditScope, HangSession, PlannedSession, Settings } from './lib/domain/types';
+  import type { EditScope, HangSession, PlannedSession, ScheduleDay, Settings } from './lib/domain/types';
+  import ScheduleSheet from './lib/ui/ScheduleSheet.svelte';
   import { Store, type Snapshot } from './lib/store/db';
   import { DocError, parseDoc, toDoc } from './lib/store/doc';
   import { Sync, type SyncStatus } from './lib/store/sync';
-  import { extraSession, findSuggestions, moveSession, moveToEdge, redate, restartAfterBreak, skipNext, stepBack, type Suggestion } from './lib/domain/suggest';
+  import { applySchedule, extraSession, findSuggestions, moveSession, moveToEdge, restartAfterBreak, skipNext, stepBack, type Suggestion } from './lib/domain/suggest';
   import type { SuggestionAction } from './lib/ui/SuggestionCard.svelte';
   import EntryEditor from './routes/EntryEditor.svelte';
   import Home from './routes/Home.svelte';
@@ -240,19 +241,31 @@
 
   async function changeSettings(next: Settings) {
     if (!data || !store) return;
-    const prev = data.settings.schedule;
     await store.saveSettings(next);
     data.settings = next;
-    // New schedule days move the open sessions, from today.
-    if (prev.fullDay !== next.schedule.fullDay || prev.lightDay !== next.schedule.lightDay) {
-      const before = $state.snapshot(data.sessions);
-      // Start tomorrow when a session was already logged today.
-      const today = toIsoDate(new Date());
-      const trainedToday = data.hangSessions.some((h) => toIsoDate(new Date(h.datetime)) === today);
-      const after = redate(before, next, trainedToday ? addDays(today, 1) : today);
-      await store.saveSessions(after.filter((x, i) => x !== before[i]));
-      data.sessions = after;
-    }
+  }
+
+  let scheduleOpen = $state(false);
+
+  /** New weekly schedule: open sessions move to the new days, from today. */
+  async function changeSchedule(days: ScheduleDay[]) {
+    if (!data || !store) return;
+    const next: Settings = { ...$state.snapshot(data.settings), schedule: { ...$state.snapshot(data.settings.schedule), days } };
+    // Start tomorrow when a session was already logged today.
+    const today = toIsoDate(new Date());
+    const trainedToday = data.hangSessions.some((h) => toIsoDate(new Date(h.datetime)) === today);
+    const before = $state.snapshot(data.sessions);
+    const tag = `:s${crypto.randomUUID().slice(0, 4)}`;
+    const result = applySchedule(before, next, $state.snapshot(data.plan), trainedToday ? addDays(today, 1) : today, tag);
+    await store.saveSettings(next);
+    await store.updateSessions(
+      result.sessions.filter((x) => !before.includes(x)),
+      result.removed,
+    );
+    data.settings = next;
+    data.sessions = result.sessions;
+    // The previewed session may have been rebuilt with a new id.
+    if (view.name === 'preview' && !view.extra && !result.sessions.some((x) => x.id === (view as { id: string }).id)) back();
   }
 
   // Theme: "system" follows the phone; light and dark override it.
@@ -378,6 +391,7 @@
       onReset={() => resetSession(current.id)}
       extra={isExtra}
       onMove={(date, shift) => moveDate(current.id, date, shift)}
+      onSchedule={() => (scheduleOpen = true)}
       onBack={back}
       onStart={(s) => go({ name: 'timer', id: s.id, extra: isExtra ? s : undefined })}
     />
@@ -418,6 +432,7 @@
         settings={data.settings}
         {syncLine}
         onChange={changeSettings}
+        onSchedule={() => (scheduleOpen = true)}
         onLogout={doLogout}
         onExport={exportData}
         onImport={importData}
@@ -436,7 +451,7 @@
         {onSuggestion}
         onOpen={(id) => go({ name: 'preview', id })}
         onExtra={openExtra}
-        onSchedule={() => (view = { name: 'settings' })}
+        onSchedule={() => (scheduleOpen = true)}
       />
     {/if}
   </main>
@@ -454,6 +469,10 @@
       Settings
     </button>
   </nav>
+{/if}
+
+{#if scheduleOpen && data}
+  <ScheduleSheet days={data.settings.schedule.days} onSave={changeSchedule} onClose={() => (scheduleOpen = false)} />
 {/if}
 
 <style>

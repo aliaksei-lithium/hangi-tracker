@@ -35,6 +35,12 @@
 
   let extraSheet = $state(false);
   const SHORT_DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const scheduleText = $derived(
+    [...settings.schedule.days]
+      .sort((a, b) => ((a.day + 6) % 7) - ((b.day + 6) % 7))
+      .map((d) => `${SHORT_DAYS[d.day]} ${d.type}`)
+      .join(', '),
+  );
 
   // Re-evaluate time-based text every minute, so the greeting changes while the app is open.
   let now = $state(new Date());
@@ -111,7 +117,7 @@
       Train now, outside the plan
     </button>
     <button class="link muted-link" onclick={onSchedule}>
-      Schedule: {SHORT_DAYS[settings.schedule.fullDay]} full, {SHORT_DAYS[settings.schedule.lightDay]} light · Change
+      Schedule: {scheduleText} · Change
     </button>
   </div>
 

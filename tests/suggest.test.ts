@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { newEntry } from '../src/lib/domain/log';
 import { defaultSettings, generatePlan, nextSession, resetToPlan } from '../src/lib/domain/plan';
-import { extraSession, findSuggestions, moveSession, moveToEdge, redate, restartAfterBreak, skipNext, stepBack } from '../src/lib/domain/suggest';
+import { applySchedule, extraSession, findSuggestions, moveSession, moveToEdge, redate, restartAfterBreak, skipNext, stepBack } from '../src/lib/domain/suggest';
 import type { HangSession, PlannedSession } from '../src/lib/domain/types';
 
 const settings = defaultSettings();
@@ -164,5 +164,61 @@ describe('extraSession', () => {
     expect(extra.sets).toHaveLength(6);
     expect(extra.id.startsWith('extra:')).toBe(true);
     expect(planned.some((s) => s.id === extra.id)).toBe(false);
+  });
+});
+
+describe('applySchedule', () => {
+  const mwf = {
+    ...settings,
+    schedule: {
+      ...settings.schedule,
+      days: [
+        { day: 1, type: 'full' as const },
+        { day: 3, type: 'light' as const },
+        { day: 5, type: 'full' as const },
+      ],
+    },
+  };
+
+  it('rebuilds the open weeks on the new days and keeps done sessions', () => {
+    const planned = sessions.map((s) => (s.week === 1 ? { ...s, status: 'done' as const } : s));
+    const { sessions: out, removed } = applySchedule(planned, mwf, plan, '2026-10-27', 'x');
+    expect(removed).toHaveLength(14); // weeks 2-8, two sessions each
+    expect(out.filter((s) => s.status === 'done')).toHaveLength(2);
+    const w2 = out.filter((s) => s.week === 2);
+    expect(w2.map((s) => [s.type, s.date])).toEqual([
+      ['full', '2026-10-30'], // Friday
+      ['full', '2026-11-02'], // Monday
+      ['light', '2026-11-04'], // Wednesday
+    ]);
+    expect(out.filter((s) => s.week === 8)).toHaveLength(3);
+    expect(new Set(out.map((s) => s.id)).size).toBe(out.length);
+  });
+
+  it('keeps the open sessions of a week already started', () => {
+    const planned = sessions.map((s) => (s.id === 'p1:w1:full' ? { ...s, status: 'done' as const } : s));
+    const { sessions: out } = applySchedule(planned, mwf, plan, '2026-10-20', 'x');
+    const w1 = out.filter((s) => s.week === 1);
+    expect(w1.map((s) => [s.id, s.status, s.date])).toEqual([
+      ['p1:w1:full', 'done', '2026-10-19'],
+      ['p1:w1:light', 'planned', '2026-10-21'], // the next Wednesday
+    ]);
+    expect(out.find((s) => s.week === 2)!.date > '2026-10-21').toBe(true);
+  });
+
+  it('keeps plan values from an accepted suggestion', () => {
+    const moved = moveToEdge(sessions, settings, 20);
+    const { sessions: out } = applySchedule(moved, mwf, plan, '2026-10-13', 'x');
+    expect(out.find((s) => s.week === 3 && s.type === 'full')!.sets[0].edgeMm).toBe(20);
+  });
+});
+
+describe('redate with several days per type', () => {
+  it('gives each open session the next day of its type', () => {
+    const mf = { ...settings, schedule: { ...settings.schedule, days: [{ day: 1, type: 'full' as const }, { day: 5, type: 'full' as const }, { day: 3, type: 'light' as const }] } };
+    const out = redate(sessions, mf, '2026-10-13');
+    expect(byId(out, 'p1:w1:full').date).toBe('2026-10-16'); // Friday
+    expect(byId(out, 'p1:w1:light').date).toBe('2026-10-21'); // Wednesday
+    expect(byId(out, 'p1:w2:full').date).toBe('2026-10-23'); // Friday
   });
 });

@@ -83,6 +83,13 @@ export class Store {
     await this.changed();
   }
 
+  /** Saves some planned sessions and deletes others, in one transaction. */
+  async updateSessions(put: PlannedSession[], remove: string[]): Promise<void> {
+    const tx = this.db.transaction('plannedSessions', 'readwrite');
+    await Promise.all([...put.map((s) => tx.store.put(s)), ...remove.map((id) => tx.store.delete(id)), tx.done]);
+    await this.changed();
+  }
+
   /** Saves a logged session, and optionally planned sessions, in one transaction. */
   async saveHangSession(session: HangSession, planned: PlannedSession[] = []): Promise<void> {
     const tx = this.db.transaction(['hangSessions', 'plannedSessions'], 'readwrite');

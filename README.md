@@ -30,9 +30,9 @@ home screen and keeps working without a network.
 - **Edit anything before you start.** Edge, hang time, sets, rest, grip and added
   weight, for the whole session or for a single set. Save the change for this session
   only, or for all next sessions of that type.
-- **Your schedule, not the plan's.** Pick your training days, move a session to
-  another date (the rest of the plan follows), or train now with an extra session
-  outside the plan.
+- **Your schedule, not the plan's.** Pick your training days like a calendar repeat
+  rule (for example Mon full, Wed light, Fri full), move a session to another date
+  (the rest of the plan follows), or train now with an extra session outside the plan.
 - **One tap to log a set.** During rest, mark the last set completed or failed. After
   the session, add effort (RPE), pain and where it hurts, body weight and a note.
   Everything is saved at once.

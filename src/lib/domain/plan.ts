@@ -4,6 +4,7 @@
 import { addDays, weekday } from './dates';
 import type {
   EditScope,
+  ScheduleDay,
   Grip,
   HangSession,
   Plan,
@@ -43,7 +44,13 @@ export function defaultSettings(): Settings {
       warmupOn: true,
       grip: 'half_crimp',
     },
-    schedule: { fullDay: 1, lightDay: 4, minGapHours: 48 },
+    schedule: {
+      days: [
+        { day: 1, type: 'full' },
+        { day: 4, type: 'light' },
+      ],
+      minGapHours: 48,
+    },
     timer: { countdownSec: 10, prepareSec: 5, beeps: true, voice: true, wakeLock: true },
     rules: { editScope: null, suggestions: true, painThreshold: 3, breakDays: 10 },
     general: { theme: 'system' },
@@ -59,11 +66,26 @@ export function withDefaults(saved: Partial<Settings> | undefined): Settings {
   if (!saved) return d;
   return {
     protocol: { ...d.protocol, ...saved.protocol },
-    schedule: { ...d.schedule, ...saved.schedule },
+    schedule: migrateSchedule(d.schedule, saved.schedule),
     timer: { ...d.timer, ...saved.timer },
     rules: { ...d.rules, ...saved.rules },
     general: { ...d.general, ...saved.general },
   };
+}
+
+/** Older versions stored one full day and one light day; newer ones a list of days. */
+function migrateSchedule(d: Settings['schedule'], saved: unknown): Settings['schedule'] {
+  if (!saved || typeof saved !== 'object') return d;
+  const old = saved as { days?: ScheduleDay[]; fullDay?: number; lightDay?: number; minGapHours?: number };
+  const days =
+    old.days ??
+    (typeof old.fullDay === 'number' && typeof old.lightDay === 'number'
+      ? [
+          { day: old.fullDay, type: 'full' as const },
+          { day: old.lightDay, type: 'light' as const },
+        ]
+      : d.days);
+  return { days, minGapHours: old.minGapHours ?? d.minGapHours };
 }
 
 export function stepForWeek(steps: ProgressionStep[], week: number): ProgressionStep {
@@ -85,8 +107,9 @@ export function planSets(settings: Settings, type: SessionType, week: number): S
   }));
 }
 
-export function sessionId(planId: string, week: number, type: SessionType): string {
-  return `${planId}:w${week}:${type}`;
+/** `p1:w3:full`, and `p1:w3:full2` for a second full session in the same week. */
+export function sessionId(planId: string, week: number, type: SessionType, n = 1): string {
+  return `${planId}:w${week}:${type}${n > 1 ? n : ''}`;
 }
 
 /** First date on or after `from` that falls on `day` (0 = Sunday). */
@@ -94,32 +117,66 @@ export function nextWeekday(from: string, day: number): string {
   return addDays(from, (day - weekday(from) + 7) % 7);
 }
 
+/** Schedule days in the order they come in a 7-day block that starts on `startDate`. */
+export function weekSlots(days: ScheduleDay[], startDate: string): { offset: number; type: SessionType }[] {
+  const start = weekday(startDate);
+  return days.map((d) => ({ offset: (d.day - start + 7) % 7, type: d.type })).sort((a, b) => a.offset - b.offset);
+}
+
 /**
- * Generates the plan. Week 1 starts with the first full-session day on or after `today`;
- * the light session follows on the next light day.
+ * The first training day on or after `from`. Prefers a full-session day, so a plan
+ * starts with a full session; falls back to any training day.
  */
-export function generatePlan(settings: Settings, today: string, planId: string): { plan: Plan; sessions: PlannedSession[] } {
-  const { fullDay, lightDay } = settings.schedule;
-  const startDate = nextWeekday(today, fullDay);
-  const lightOffset = (lightDay - fullDay + 7) % 7 || 7;
-  const sessions: PlannedSession[] = [];
-  for (let week = 1; week <= settings.protocol.weeks; week++) {
-    const fullDate = addDays(startDate, (week - 1) * 7);
-    for (const [type, date] of [
-      ['full', fullDate],
-      ['light', addDays(fullDate, lightOffset)],
-    ] as const) {
-      sessions.push({
-        id: sessionId(planId, week, type),
+export function firstTrainingDay(days: ScheduleDay[], from: string, type: SessionType = 'full'): string {
+  const pool = days.some((d) => d.type === type) ? days.filter((d) => d.type === type) : days;
+  return pool.map((d) => nextWeekday(from, d.day)).sort()[0] ?? from;
+}
+
+/**
+ * Sessions for plan weeks `fromWeek`..`toWeek`. Each week is a 7-day block from
+ * `startDate` with one session on every schedule day. `carry` gives plan values kept
+ * from earlier sessions (after an accepted suggestion), by week and type.
+ */
+export function generateWeeks(
+  settings: Settings,
+  planId: string,
+  startDate: string,
+  fromWeek: number,
+  toWeek: number,
+  carry: (week: number, type: SessionType, n: number) => Pick<PlannedSession, 'baseSets' | 'baseWarmup'> | null = () => null,
+): PlannedSession[] {
+  const slots = weekSlots(settings.schedule.days, startDate);
+  const out: PlannedSession[] = [];
+  for (let week = fromWeek; week <= toWeek; week++) {
+    const blockStart = addDays(startDate, (week - fromWeek) * 7);
+    const count: Partial<Record<SessionType, number>> = {};
+    for (const slot of slots) {
+      const n = (count[slot.type] = (count[slot.type] ?? 0) + 1);
+      const kept = carry(week, slot.type, n);
+      const sets = kept?.baseSets ?? planSets(settings, slot.type, week);
+      out.push({
+        id: sessionId(planId, week, slot.type, n),
         week,
-        type,
-        date,
-        warmup: settings.protocol.warmupOn,
-        sets: planSets(settings, type, week),
+        type: slot.type,
+        date: addDays(blockStart, slot.offset),
+        warmup: kept?.baseWarmup ?? settings.protocol.warmupOn,
+        sets: sets.map((x) => ({ ...x })),
         status: 'planned',
+        ...(kept?.baseSets && { baseSets: kept.baseSets }),
+        ...(kept?.baseWarmup !== undefined && { baseWarmup: kept.baseWarmup }),
       });
     }
   }
+  return out;
+}
+
+/**
+ * Generates the plan. Week 1 starts on the first full-session day on or after `today`;
+ * every week has one session on each schedule day.
+ */
+export function generatePlan(settings: Settings, today: string, planId: string): { plan: Plan; sessions: PlannedSession[] } {
+  const startDate = firstTrainingDay(settings.schedule.days, today);
+  const sessions = generateWeeks(settings, planId, startDate, 1, settings.protocol.weeks);
   return { plan: { id: planId, startDate, weeks: settings.protocol.weeks }, sessions };
 }
 
