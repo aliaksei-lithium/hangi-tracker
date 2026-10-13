@@ -7,7 +7,7 @@
   import { Store, type Snapshot } from './lib/store/db';
   import { DocError, parseDoc, toDoc } from './lib/store/doc';
   import { Sync, type SyncStatus } from './lib/store/sync';
-  import { findSuggestions, moveToEdge, redate, restartAfterBreak, skipNext, stepBack, type Suggestion } from './lib/domain/suggest';
+  import { extraSession, findSuggestions, moveSession, moveToEdge, redate, restartAfterBreak, skipNext, stepBack, type Suggestion } from './lib/domain/suggest';
   import type { SuggestionAction } from './lib/ui/SuggestionCard.svelte';
   import EntryEditor from './routes/EntryEditor.svelte';
   import Home from './routes/Home.svelte';
@@ -22,8 +22,8 @@
     | { name: 'home' }
     | { name: 'log' }
     | { name: 'settings' }
-    | { name: 'preview'; id: string }
-    | { name: 'timer'; id: string }
+    | { name: 'preview'; id: string; extra?: PlannedSession }
+    | { name: 'timer'; id: string; extra?: PlannedSession }
     | { name: 'summary'; id: string }
     | { name: 'entry'; entry: HangSession; isNew: boolean };
 
@@ -129,6 +129,20 @@
     data.sessions = data.sessions.map((x) => (x.id === id ? reset : x));
   }
 
+  async function moveDate(id: string, date: string, shiftNext: boolean) {
+    if (!data || !store) return;
+    const before = $state.snapshot(data.sessions);
+    const after = moveSession(before, id, date, shiftNext);
+    await store.saveSessions(after.filter((x, i) => x !== before[i]));
+    data.sessions = after;
+  }
+
+  function openExtra(type: 'full' | 'light') {
+    if (!data) return;
+    const s = extraSession($state.snapshot(data.sessions), $state.snapshot(data.settings), type, toIsoDate(new Date()));
+    go({ name: 'preview', id: s.id, extra: s });
+  }
+
   // ---- log ----
 
   function lastBodyweight(): number | null {
@@ -139,21 +153,22 @@
   }
 
   /** Saves the session as soon as the timer ends, before the summary opens. */
-  async function timerDone(planned: PlannedSession, o: TimerOutcome) {
+  async function timerDone(planned: PlannedSession, o: TimerOutcome, extra: boolean) {
     if (!data || !store) return;
+    // An extra session is logged without a plan link and leaves the plan as it is.
     const session: HangSession = {
       ...newEntry(null, new Date(o.startedAt).toISOString(), crypto.randomUUID()),
-      plannedId: planned.id,
+      plannedId: extra ? null : planned.id,
       type: planned.type,
-      week: planned.week,
+      week: extra ? null : planned.week,
       durationSec: o.durationSec,
       plannedSets: o.plannedSets,
       sets: o.sets,
     };
-    const done: PlannedSession = { ...$state.snapshot(planned), status: 'done' };
-    await store.saveHangSession(session, [done]);
+    const done: PlannedSession[] = extra ? [] : [{ ...$state.snapshot(planned), status: 'done' }];
+    await store.saveHangSession(session, done);
     data.hangSessions = [...data.hangSessions, session];
-    data.sessions = data.sessions.map((s) => (s.id === done.id ? done : s));
+    data.sessions = data.sessions.map((s) => done.find((d) => d.id === s.id) ?? s);
     go({ name: 'summary', id: session.id });
     void sync?.flush();
   }
@@ -331,8 +346,10 @@
 
   const current = $derived.by(() => {
     const v = view;
-    return data && (v.name === 'preview' || v.name === 'timer') ? data.sessions.find((s) => s.id === v.id) : undefined;
+    if (!data || (v.name !== 'preview' && v.name !== 'timer')) return undefined;
+    return v.extra ?? data.sessions.find((s) => s.id === v.id);
   });
+  const isExtra = $derived((view.name === 'preview' || view.name === 'timer') && !!view.extra);
   const summarySession = $derived.by(() => {
     const v = view;
     return data && v.name === 'summary' ? data.hangSessions.find((s) => s.id === v.id) : undefined;
@@ -358,12 +375,14 @@
       settings={data.settings}
       onSave={saveSession}
       onReset={() => resetSession(current.id)}
+      extra={isExtra}
+      onMove={(date, shift) => moveDate(current.id, date, shift)}
       onBack={back}
-      onStart={() => go({ name: 'timer', id: current.id })}
+      onStart={(s) => go({ name: 'timer', id: s.id, extra: isExtra ? s : undefined })}
     />
   </main>
 {:else if view.name === 'timer' && current}
-  <Timer session={current} settings={data.settings} onDone={(o) => timerDone(current, o)} />
+  <Timer session={current} settings={data.settings} onDone={(o) => timerDone(current, o, isExtra)} />
 {:else if view.name === 'summary' && summarySession}
   <main>
     <Summary session={summarySession} lastBodyweight={lastBodyweight()} onChange={updateHangSession} onDone={back} />
@@ -415,6 +434,8 @@
         suggestion={suggestions[0] ?? null}
         {onSuggestion}
         onOpen={(id) => go({ name: 'preview', id })}
+        onExtra={openExtra}
+        onSchedule={() => (view = { name: 'settings' })}
       />
     {/if}
   </main>

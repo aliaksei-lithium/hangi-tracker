@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { newEntry } from '../src/lib/domain/log';
 import { defaultSettings, generatePlan, nextSession, resetToPlan } from '../src/lib/domain/plan';
-import { findSuggestions, moveToEdge, redate, restartAfterBreak, skipNext, stepBack } from '../src/lib/domain/suggest';
+import { extraSession, findSuggestions, moveSession, moveToEdge, redate, restartAfterBreak, skipNext, stepBack } from '../src/lib/domain/suggest';
 import type { HangSession, PlannedSession } from '../src/lib/domain/types';
 
 const settings = defaultSettings();
@@ -135,5 +135,34 @@ describe('plan changes', () => {
     const next = nextSession(out)!;
     expect(next.date >= '2026-11-18').toBe(true);
     expect(byId(out, 'p1:w3:full')).toMatchObject({ week: 2 });
+  });
+});
+
+describe('moveSession', () => {
+  it('moves one session only', () => {
+    const out = moveSession(sessions, 'p1:w1:full', '2026-10-13', false);
+    expect(byId(out, 'p1:w1:full').date).toBe('2026-10-13');
+    expect(byId(out, 'p1:w1:light').date).toBe('2026-10-22');
+  });
+
+  it('moves the next open sessions by the same number of days', () => {
+    const planned = sessions.map((s) => (s.id === 'p1:w1:light' ? { ...s, status: 'done' as const } : s));
+    const out = moveSession(planned, 'p1:w2:full', '2026-10-24', true); // two days earlier
+    expect(byId(out, 'p1:w2:full').date).toBe('2026-10-24');
+    expect(byId(out, 'p1:w2:light').date).toBe('2026-10-27');
+    expect(byId(out, 'p1:w8:light').date).toBe('2026-12-08');
+    expect(byId(out, 'p1:w1:full').date).toBe('2026-10-19'); // earlier ones stay
+    expect(byId(out, 'p1:w1:light').date).toBe('2026-10-22'); // done ones stay
+  });
+});
+
+describe('extraSession', () => {
+  it('takes the values of the next open session of that type', () => {
+    const planned = sessions.map((s) => (s.week <= 3 ? { ...s, status: 'done' as const } : s));
+    const extra = extraSession(planned, settings, 'full', '2026-11-05');
+    expect(extra).toMatchObject({ type: 'full', week: 4, date: '2026-11-05', status: 'planned' });
+    expect(extra.sets).toHaveLength(6);
+    expect(extra.id.startsWith('extra:')).toBe(true);
+    expect(planned.some((s) => s.id === extra.id)).toBe(false);
   });
 });

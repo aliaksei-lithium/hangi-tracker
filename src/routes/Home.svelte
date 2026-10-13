@@ -18,6 +18,8 @@
     suggestion,
     onSuggestion,
     onOpen,
+    onExtra,
+    onSchedule,
   }: {
     user: User;
     plan: Plan;
@@ -27,7 +29,12 @@
     suggestion: Suggestion | null;
     onSuggestion: (s: Suggestion, a: SuggestionAction) => void;
     onOpen: (id: string) => void;
+    onExtra: (type: 'full' | 'light') => void;
+    onSchedule: () => void;
   } = $props();
+
+  let extraSheet = $state(false);
+  const SHORT_DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
   // Re-evaluate time-based text every minute, so the greeting changes while the app is open.
   let now = $state(new Date());
@@ -98,6 +105,16 @@
     </Frame>
   {/if}
 
+  <div class="row-links">
+    <button class="link" onclick={() => (extraSheet = true)}>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>
+      Train now, outside the plan
+    </button>
+    <button class="link muted-link" onclick={onSchedule}>
+      Schedule: {SHORT_DAYS[settings.schedule.fullDay]} full, {SHORT_DAYS[settings.schedule.lightDay]} light · Change
+    </button>
+  </div>
+
   <div class="lists">
     {#if upcoming.length}
       <div class="eyebrow list-title">Upcoming</div>
@@ -120,6 +137,21 @@
     {/if}
   </div>
 </div>
+
+{#if extraSheet}
+  <div class="scrim" role="presentation" onclick={(e) => e.target === e.currentTarget && (extraSheet = false)}>
+    <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="extra-title">
+      <h2 id="extra-title" class="display">Train now</h2>
+      <p class="muted">An extra session outside the plan. It uses the values of your next session of that type, is saved in the log, and the plan stays as it is.</p>
+      <p class="muted">To do a planned session on another day, open it and use “Change date”.</p>
+      <div class="sheet-actions">
+        <button class="btn btn-primary" onclick={() => { extraSheet = false; onExtra('full'); }}>Full</button>
+        <button class="btn btn-primary" onclick={() => { extraSheet = false; onExtra('light'); }}>Light</button>
+      </div>
+      <button class="btn btn-secondary" onclick={() => (extraSheet = false)}>Cancel</button>
+    </div>
+  </div>
+{/if}
 
 <style>
   .strip {
@@ -151,5 +183,13 @@
   .item.static { border-bottom: 0; }
   .item strong { font-weight: 600; }
   .muted { color: var(--muted); }
+  .row-links { display: flex; flex-direction: column; align-items: flex-start; margin-top: -4px; }
+  .link { min-height: 44px; display: inline-flex; align-items: center; gap: 8px; border: 0; background: transparent; padding: 0; color: var(--accent); font-weight: 600; font-size: 15px; text-align: left; }
+  .muted-link { color: var(--muted); font-weight: 400; font-size: var(--fs-sm); min-height: 36px; }
+  .scrim { position: fixed; inset: 0; background: rgba(14, 15, 16, 0.55); display: flex; align-items: flex-end; justify-content: center; z-index: 10; }
+  .sheet { width: 100%; max-width: 560px; background: var(--surface); box-shadow: var(--shadow-3); padding: 24px 20px max(34px, env(safe-area-inset-bottom)); display: flex; flex-direction: column; gap: 14px; }
+  .sheet h2 { margin: 0; font-size: 28px; }
+  .sheet p { margin: 0; }
+  .sheet-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
   .done { display: flex; align-items: center; gap: 6px; }
 </style>

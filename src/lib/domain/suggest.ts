@@ -167,3 +167,42 @@ export function restartAfterBreak(sessions: PlannedSession[], settings: Settings
   return redate(stepBack(sessions, settings, newId), settings, today);
 }
 
+
+// ---- user changes to dates and extra sessions ----
+
+/**
+ * Moves one open session to a new date. With `shiftNext`, the open sessions after it
+ * move by the same number of days, so the gaps between sessions stay the same.
+ */
+export function moveSession(sessions: PlannedSession[], id: string, newDate: string, shiftNext: boolean): PlannedSession[] {
+  const target = sessions.find((s) => s.id === id);
+  if (!target) return sessions;
+  const delta = daysBetween(target.date, newDate);
+  if (delta === 0) return sessions;
+  return sessions.map((s) => {
+    if (s.id === id) return { ...s, date: newDate };
+    if (shiftNext && isOpen(s) && (s.date > target.date || (s.date === target.date && s.week > target.week))) {
+      return { ...s, date: addDays(s.date, delta) };
+    }
+    return s;
+  });
+}
+
+/**
+ * A one-off session outside the plan. It takes the values of the next open session of
+ * that type, so it fits where you are in the plan. It is never stored in the plan.
+ */
+export function extraSession(sessions: PlannedSession[], settings: Settings, type: 'full' | 'light', today: string): PlannedSession {
+  const next = sortSessions(sessions).find((s) => s.type === type && isOpen(s));
+  const source = next ?? [...sortSessions(sessions)].reverse().find((s) => s.type === type);
+  const sets = source ? baseSetsOf(source, settings) : [];
+  return {
+    id: `extra:${today}:${type}`,
+    week: source?.week ?? 1,
+    type,
+    date: today,
+    warmup: settings.protocol.warmupOn,
+    sets: sets.map((x) => ({ ...x })),
+    status: 'planned',
+  };
+}

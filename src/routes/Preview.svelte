@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { untrack } from 'svelte';
+  import { tick, untrack } from 'svelte';
   import { player } from '../lib/audio/player';
-  import { formatShortDate } from '../lib/domain/dates';
+  import { daysBetween, formatShortDate, toIsoDate } from '../lib/domain/dates';
   import { formatDuration, sessionDurationSec } from '../lib/domain/plan';
   import { EDGES_MM, type EditScope, type PlannedSession, type Settings } from '../lib/domain/types';
   import { GRIPS, gripLabel, kg, typeLabel } from '../lib/format';
@@ -15,14 +15,49 @@
     onReset,
     onBack,
     onStart,
+    onMove,
+    extra = false,
   }: {
     session: PlannedSession;
     settings: Settings;
     onSave: (draft: PlannedSession, scope: EditScope, remember: boolean) => Promise<void>;
     onReset: () => Promise<void>;
     onBack: () => void;
-    onStart: () => void;
+    /** Gets the session as edited; for a planned session it equals the saved one. */
+    onStart: (session: PlannedSession) => void;
+    onMove: (date: string, shiftNext: boolean) => Promise<void>;
+    /** A one-off session outside the plan: edits are not saved, there is no date to change. */
+    extra?: boolean;
   } = $props();
+
+  // Change date sheet.
+  let dateSheet = $state(false);
+  let newDate = $state('');
+  let shiftNext = $state(true);
+  const shiftDays = $derived(newDate ? daysBetween(session.date, newDate) : 0);
+
+  function openDateSheet() {
+    newDate = toIsoDate(new Date());
+    shiftNext = true;
+    dateSheet = true;
+  }
+
+  async function moveDate() {
+    if (!newDate) return;
+    // Keep unsaved set edits across the move.
+    const edits = $state.snapshot(draft);
+    saving = true;
+    try {
+      await onMove(newDate, shiftNext);
+      await tick();
+      draft = { ...copy(), warmup: edits.warmup, sets: edits.sets };
+      dateSheet = false;
+    } finally {
+      saving = false;
+    }
+  }
+
+  const start = () => onStart($state.snapshot(draft));
 
 
   // The draft is a deep copy; the saved session only changes on Save.
@@ -68,7 +103,7 @@
   function leave(action: 'start' | 'back') {
     // Audio may only be unlocked inside the tap itself.
     if (action === 'start') player.unlock();
-    if (!dirty) return action === 'start' ? onStart() : onBack();
+    if (extra || !dirty) return action === 'start' ? start() : onBack();
     const remembered = settings.rules.editScope;
     if (remembered) return save(action, remembered, false);
     scope = 'this';
@@ -82,7 +117,7 @@
     try {
       await onSave($state.snapshot(draft), s, rememberChoice);
       dialog = null;
-      if (action === 'start') onStart();
+      if (action === 'start') start();
       else onBack();
     } finally {
       saving = false;
@@ -100,12 +135,19 @@
     <button class="icon" aria-label="Back" onclick={() => leave('back')}>
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M15 5l-7 7 7 7"></path></svg>
     </button>
-    <button class="link" onclick={onReset}>Reset to plan</button>
+    {#if !extra}<button class="link" onclick={onReset}>Reset to plan</button>{/if}
   </div>
 
   <div class="content">
     <div class="head">
-      <div class="meta">{formatShortDate(draft.date)} · Week {draft.week} · {typeLabel(draft.type)}</div>
+      {#if extra}
+        <div class="meta">Today · {typeLabel(draft.type)} · outside the plan</div>
+      {:else}
+        <div class="meta">
+          {formatShortDate(draft.date)} · Week {draft.week} · {typeLabel(draft.type)}
+          <button class="inline-link" onclick={openDateSheet}>Change date</button>
+        </div>
+      {/if}
       <div class="titlebar">
         <h1 class="display">Session preview</h1>
         <span class="display total" aria-label="Total time {total}">{total}</span>
@@ -123,7 +165,7 @@
     <div class="sets">
       {#each draft.sets as set, i (i)}
         <div class="set">
-          <button class="row" aria-expanded={open === i} onclick={() => (open = open === i ? null : i)}>
+          <button class="row" aria-expanded={open === i} aria-label="Set {i + 1}: {set.edgeMm} mm, {set.hangSec} s" onclick={() => (open = open === i ? null : i)}>
             <span class="display n">Set {i + 1}</span>
             <span class="vals">
               <span class:em={set.edgeMm !== mainEdge}>{set.edgeMm} mm</span>
@@ -217,6 +259,29 @@
   {/if}
 </div>
 
+{#if dateSheet}
+  <div class="scrim" role="presentation" onclick={(e) => e.target === e.currentTarget && (dateSheet = false)}>
+    <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="date-title">
+      <h2 id="date-title" class="display">Change date</h2>
+      <p class="muted small">Planned for {formatShortDate(session.date)}.</p>
+      <label class="date-field">
+        <span class="muted small">New date</span>
+        <input type="date" bind:value={newDate} />
+      </label>
+      {#if shiftDays !== 0}
+        <label class="remember">
+          <input type="checkbox" bind:checked={shiftNext} />
+          Also move the next sessions {Math.abs(shiftDays)} day{Math.abs(shiftDays) === 1 ? '' : 's'} {shiftDays < 0 ? 'earlier' : 'later'}
+        </label>
+      {/if}
+      <div class="sheet-actions">
+        <button class="btn btn-secondary" onclick={() => (dateSheet = false)}>Cancel</button>
+        <button class="btn btn-primary" disabled={saving || !newDate || shiftDays === 0} onclick={moveDate}>Save</button>
+      </div>
+    </div>
+  </div>
+{/if}
+
 <style>
   .screen { flex: 1; display: flex; flex-direction: column; position: relative; }
   .topbar { display: flex; align-items: center; justify-content: space-between; padding: 0 8px 0 4px; }
@@ -225,7 +290,11 @@
   .danger { color: var(--danger); }
   .content { flex: 1; padding: 0 var(--sp-5) var(--sp-6); display: flex; flex-direction: column; gap: var(--sp-4); }
   .head { display: flex; flex-direction: column; gap: 2px; }
-  .meta { font-size: var(--fs-sm); color: var(--muted); }
+  .meta { font-size: var(--fs-sm); color: var(--muted); display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
+  .inline-link { border: 0; background: transparent; padding: 0; min-height: 32px; color: var(--accent); font-weight: 600; font-size: var(--fs-sm); }
+  .sheet p { margin: 0; }
+  .date-field { display: flex; flex-direction: column; gap: 6px; }
+  .date-field input { height: 48px; padding: 0 10px; background: var(--bg); border: 1px solid var(--divider); border-radius: var(--r-1); font: inherit; color: var(--text); }
   .titlebar { display: flex; align-items: baseline; justify-content: space-between; }
   h1 { margin: 0; font-size: var(--fs-2xl); }
   .total { font-size: var(--fs-xl); font-variant-numeric: tabular-nums; }
