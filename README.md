@@ -10,6 +10,14 @@
 </p>
 
 <p align="center">
+  <a href="https://hangi-tracker.aliaksei-zhynhiarouski.workers.dev"><b>Open the app →</b></a>
+  &nbsp;·&nbsp;
+  <a href="#screenshots">Screenshots</a>
+  &nbsp;·&nbsp;
+  <a href="#run-it-locally">Run it locally</a>
+</p>
+
+<p align="center">
   <img src="docs/screenshots/hero.jpg" alt="Home, timer and progress screens" width="100%">
 </p>
 
@@ -17,6 +25,9 @@ Hangi Tracker is a small web app for finger training on a hangboard. It plans an
 8-week program, runs each session with a big, loud timer you can read from two
 metres away, saves the result and shows your progress. It installs on the phone's
 home screen and keeps working without a network.
+
+**Live:** https://hangi-tracker.aliaksei-zhynhiarouski.workers.dev (on a phone, use
+"Add to Home Screen" to install it like an app).
 
 ## What it does
 
