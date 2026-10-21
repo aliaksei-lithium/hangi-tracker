@@ -7,7 +7,7 @@
   import Frame from '../lib/ui/Frame.svelte';
   import SuggestionCard, { type SuggestionAction } from '../lib/ui/SuggestionCard.svelte';
   import type { Suggestion } from '../lib/domain/suggest';
-  import { typeLabel } from '../lib/format';
+  import { typeLabel, weekLabel } from '../lib/format';
 
   let {
     user,
@@ -23,6 +23,7 @@
     guest = false,
     onLeaveGuest,
     onSkip,
+    onPlanBlock,
   }: {
     user: User;
     plan: Plan;
@@ -37,7 +38,12 @@
     guest?: boolean;
     onLeaveGuest: () => void;
     onSkip: (ids: string[]) => void;
+    onPlanBlock: () => void;
   } = $props();
+
+  // For the "block complete" card.
+  const blockDone = $derived(sessions.filter((s) => s.status === 'done' && s.id.startsWith(`${plan.id}:`)).length);
+  const blockTotal = $derived(sessions.filter((s) => s.id.startsWith(`${plan.id}:`)).length);
 
   let extraSheet = $state(false);
 
@@ -81,7 +87,7 @@
   const NUMBERS = ['no', 'one', 'two', 'three', 'four', 'five', 'six'];
 
   const lead = $derived.by(() => {
-    if (!next) return 'The plan is complete. A new plan comes with a later update.';
+    if (!next) return 'This block is complete. Plan the next one when you are ready.';
     const days = daysBetween(toIsoDate(now), next.date);
     const kind = `${next.type} session`;
     if (days < 0) return `Your ${kind} from ${WEEKDAY_NAMES[weekday(next.date)]} is still open. Do it when you are rested.`;
@@ -122,7 +128,7 @@
   {#if next}
     <Frame>
       <div class="card-head eyebrow">
-        <span class="accent">Next session</span><span>Week {next.week} of {plan.weeks}</span>
+        <span class="accent">Next session</span><span>{weekLabel(next.week, plan.weeks)}</span>
       </div>
       <div class="when">
         <span class="display date">{formatShortDate(next.date)}</span>
@@ -138,6 +144,13 @@
         <button class="btn btn-secondary" onclick={() => onOpen(next.id)}>Edit</button>
       </div>
       <button class="skip-link" onclick={() => { skipAllMissed = true; skipSheet = true; }}>Skip this session</button>
+    </Frame>
+  {:else}
+    <Frame>
+      <div class="card-head eyebrow"><span class="accent">Block {plan.number ?? 1} complete</span><span>{plan.weeks} weeks</span></div>
+      <div class="when"><span class="display date">{blockDone} of {blockTotal} sessions</span></div>
+      <div class="spec muted">Plan the next block: continue, move to a smaller edge or repeat, with an easy week first if you like.</div>
+      <button class="btn btn-primary" onclick={onPlanBlock}>Plan next block</button>
     </Frame>
   {/if}
 

@@ -53,6 +53,9 @@ Screen" to install it like an app.
 - **Progress without typing.** Personal records per edge, time under load per week,
   edge and hang time over time, effort and pain per session, a calendar and plan vs
   actual.
+- **Block after block.** When a block ends, plan the next one: continue, move to a
+  smaller edge, or repeat, with an optional easy week first. Adjust edges, start
+  values and length (4–12 weeks), and see every week before you start.
 - **Suggestions, never orders.** Move to a smaller edge when you are ready, take a step
   back after pain, or go back a week after a break. Each one has Accept and Dismiss.
   A sharp pain, click or pop shows a safety message.

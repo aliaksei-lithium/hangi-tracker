@@ -5,6 +5,7 @@
 import { addDays, daysBetween, toIsoDate } from './dates';
 import { baseSetsOf, firstTrainingDay, generateWeeks, planSets, sortSessions, stepForWeek } from './plan';
 import { weekOf } from './progress';
+import { blockSets } from './block';
 import { EDGES_MM, type HangSession, type Plan, type PlannedSession, type SetSpec, type Settings } from './types';
 
 export type SuggestionKind = 'edge' | 'pain' | 'break';
@@ -215,7 +216,13 @@ export function applySchedule(
     return old ? { baseSets: old.baseSets, baseWarmup: old.baseWarmup } : null;
   };
   const toWeek = Math.max(plan.weeks, ...removedList.map((s) => s.week));
-  const fresh = generateWeeks(settings, `${plan.id}${tag}`, start, rebuildFrom, toWeek, carry);
+  // Blocks planned in the app build their weeks from the block's start values.
+  const block = plan.block;
+  const fresh = block
+    ? generateWeeks(settings, `${plan.id}${tag}`, start, rebuildFrom, toWeek, carry, (t, w) => blockSets(block, t, w), block.warmup).map(
+        (s) => (s.baseSets ? s : { ...s, baseSets: s.sets.map((x) => ({ ...x })), baseWarmup: s.warmup }),
+      )
+    : generateWeeks(settings, `${plan.id}${tag}`, start, rebuildFrom, toWeek, carry);
   return { sessions: [...kept, ...fresh], removed: [...removed] };
 }
 

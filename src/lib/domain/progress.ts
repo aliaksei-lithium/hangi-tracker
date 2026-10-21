@@ -6,8 +6,12 @@ import type { HangSession, Plan, PlannedSession } from './types';
 const localDate = (iso: string) => toIsoDate(new Date(iso));
 
 /** Plan week of a logged session: its own week, or from its date. */
+/** True for planned sessions of this plan (ids start with the plan id). */
+export const inPlan = (id: string | null, plan: Plan) => !!id && id.startsWith(`${plan.id}:`);
+
 export function weekOf(s: HangSession, plan: Plan): number | null {
-  if (s.week) return s.week;
+  // A stored week only counts for sessions of this plan; older blocks have their own weeks.
+  if (s.week && inPlan(s.plannedId, plan)) return s.week;
   const d = daysBetween(plan.startDate, localDate(s.datetime));
   const w = Math.floor(d / 7) + 1;
   return w >= 1 && w <= plan.weeks ? w : null;
@@ -27,7 +31,7 @@ export function weeklyLoad(plan: Plan, planned: PlannedSession[], log: HangSessi
     const week = i + 1;
     const doneSec = log.filter((s) => weekOf(s, plan) === week).reduce((sum, s) => sum + timeUnderLoad(s), 0);
     const plannedSec = planned
-      .filter((p) => p.week === week && p.status !== 'skipped')
+      .filter((p) => p.week === week && p.status !== 'skipped' && inPlan(p.id, plan))
       .reduce((sum, p) => sum + p.sets.reduce((t, x) => t + x.hangSec, 0), 0);
     return { week, doneSec, plannedSec };
   });

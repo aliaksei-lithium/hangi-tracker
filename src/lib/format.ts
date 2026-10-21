@@ -21,3 +21,6 @@ export const PAIN_LABELS: Record<PainLocation, string> = {
   shoulder: 'Shoulder',
   none: 'None',
 };
+
+/** "Week 3 of 8", or "Easy week" for the week before a block. */
+export const weekLabel = (week: number, weeks: number) => (week === 0 ? 'Easy week' : `Week ${week} of ${weeks}`);

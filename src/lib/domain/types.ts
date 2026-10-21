@@ -39,12 +39,31 @@ export interface PlannedSession {
   baseWarmup?: boolean;
 }
 
+/** Start values of a training block; the weeks after build up from them. */
+export interface BlockConfig {
+  fullEdgeMm: number;
+  startHangSec: number;
+  startSets: number;
+  lightEdgeMm: number;
+  weeks: number;
+  /** One week of light sessions before week 1 (sessions with week 0). */
+  easyWeek: boolean;
+  fullRestSec: number;
+  lightRestSec: number;
+  grip: Grip;
+  warmup: boolean;
+}
+
 export interface Plan {
   id: string;
-  startDate: string; // date of the first full session
+  startDate: string; // date of week 1 (after an easy week, if any)
   weeks: number;
   /** Suggestions the user dismissed or accepted, so they do not come back. */
   handled?: string[];
+  /** Set for blocks planned in the app; the first plan follows the protocol instead. */
+  block?: BlockConfig;
+  /** 1 for the first block, 2 for the next, and so on. */
+  number?: number;
 }
 
 /** One row of a progression table: from week `fromWeek` on, until the next row. */

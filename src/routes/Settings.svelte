@@ -14,6 +14,8 @@
     guest = false,
     onChange,
     onSchedule,
+    onPlanBlock,
+    blockLine,
     onLogout,
     onExport,
     onImport,
@@ -25,6 +27,9 @@
     guest?: boolean;
     onChange: (settings: Settings) => void;
     onSchedule: () => void;
+    onPlanBlock: () => void;
+    /** "Block 1 · week 5 of 8" */
+    blockLine: string;
     onLogout: () => void;
     onExport: () => void;
     onImport: (file: File) => Promise<string | null>;
@@ -84,6 +89,16 @@
 <!-- Phase 7 adds the remaining groups (protocol, schedule, units, theme, language, data). -->
 <div class="content">
   <h1 class="display">Settings</h1>
+
+  <section>
+    <h2 class="eyebrow">Plan</h2>
+    <div class="rows">
+      <div class="row">
+        <span class="text"><span>{blockLine}</span><span class="sub">End this block early, repeat it, or plan the next one</span></span>
+        <button class="btn btn-secondary change" onclick={onPlanBlock}>New block</button>
+      </div>
+    </div>
+  </section>
 
   <section>
     <h2 class="eyebrow">Timer</h2>

@@ -188,6 +188,13 @@ product: log in, be greeted, run a session.
   (`baseSets`), so "Reset to plan" keeps the suggestion. Handled suggestions are kept
   in `plan.handled`. "Repeat last week" adds one week at the end.
 - Phase 7: sub-screens use browser history for the back gesture.
+- Blocks (0.7.0): "New block" plans the next block from the current one (continue at
+  the hang time reached, smaller edge at 5 s × 5, or repeat), with an optional easy week
+  (week 0, light sessions) and adjustable edges, start values, rests and length 4-12
+  weeks. Blocks up to 8 weeks follow the first weeks of the 8-week build-up; longer
+  blocks stretch it. Starting a block removes the open sessions of the current one; done
+  and skipped sessions and the log stay. Entry points: the Home card when a block is
+  complete, and Settings -> Plan (to end, restart or replace a block early).
 - Guest mode: "Try it without an account" opens the app with sample data in a
   separate local database, with no server calls. A shared demo password was rejected
   (visitors would overwrite each other's data). Open registration would need name +

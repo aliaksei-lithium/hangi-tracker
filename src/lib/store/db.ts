@@ -91,6 +91,18 @@ export class Store {
     await this.changed();
   }
 
+  /** Starts a new block: saves the plan and its sessions and removes the replaced ones, in one transaction. */
+  async replacePlan(plan: Plan, put: PlannedSession[], remove: string[]): Promise<void> {
+    const tx = this.db.transaction(['plan', 'plannedSessions'], 'readwrite');
+    await Promise.all([
+      tx.objectStore('plan').put(plan, CURRENT),
+      ...put.map((s) => tx.objectStore('plannedSessions').put(s)),
+      ...remove.map((id) => tx.objectStore('plannedSessions').delete(id)),
+      tx.done,
+    ]);
+    await this.changed();
+  }
+
   /** Saves some planned sessions and deletes others, in one transaction. */
   async updateSessions(put: PlannedSession[], remove: string[]): Promise<void> {
     const tx = this.db.transaction('plannedSessions', 'readwrite');

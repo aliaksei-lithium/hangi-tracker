@@ -144,6 +144,8 @@ export function generateWeeks(
   fromWeek: number,
   toWeek: number,
   carry: (week: number, type: SessionType, n: number) => Pick<PlannedSession, 'baseSets' | 'baseWarmup'> | null = () => null,
+  setsFor: (type: SessionType, week: number) => SetSpec[] = (type, week) => planSets(settings, type, week),
+  warmupOn: boolean = settings.protocol.warmupOn,
 ): PlannedSession[] {
   const slots = weekSlots(settings.schedule.days, startDate);
   const out: PlannedSession[] = [];
@@ -153,13 +155,13 @@ export function generateWeeks(
     for (const slot of slots) {
       const n = (count[slot.type] = (count[slot.type] ?? 0) + 1);
       const kept = carry(week, slot.type, n);
-      const sets = kept?.baseSets ?? planSets(settings, slot.type, week);
+      const sets = kept?.baseSets ?? setsFor(slot.type, week);
       out.push({
         id: sessionId(planId, week, slot.type, n),
         week,
         type: slot.type,
         date: addDays(blockStart, slot.offset),
-        warmup: kept?.baseWarmup ?? settings.protocol.warmupOn,
+        warmup: kept?.baseWarmup ?? warmupOn,
         sets: sets.map((x) => ({ ...x })),
         status: 'planned',
         ...(kept?.baseSets && { baseSets: kept.baseSets }),

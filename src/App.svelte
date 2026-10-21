@@ -3,7 +3,7 @@
   import { addDays, toIsoDate } from './lib/domain/dates';
   import { newEntry, plannedChangesOnDelete, plannedChangesOnSave } from './lib/domain/log';
   import { nextSession, resetToPlan, saveEdit, skipSessions } from './lib/domain/plan';
-  import type { EditScope, HangSession, PlannedSession, ScheduleDay, Settings } from './lib/domain/types';
+  import type { BlockConfig, EditScope, HangSession, PlannedSession, ScheduleDay, Settings } from './lib/domain/types';
   import ScheduleSheet from './lib/ui/ScheduleSheet.svelte';
   import { Store, type Snapshot } from './lib/store/db';
   import { demoContent } from './lib/domain/demo';
@@ -14,6 +14,8 @@
   import EntryEditor from './routes/EntryEditor.svelte';
   import Home from './routes/Home.svelte';
   import Progress from './routes/Progress.svelte';
+  import NewBlock from './routes/NewBlock.svelte';
+  import { generateBlock, openSessionIds, planNextBlock } from './lib/domain/block';
   import Login from './routes/Login.svelte';
   import Preview from './routes/Preview.svelte';
   import SettingsView from './routes/Settings.svelte';
@@ -27,7 +29,8 @@
     | { name: 'preview'; id: string; extra?: PlannedSession }
     | { name: 'timer'; id: string; extra?: PlannedSession }
     | { name: 'summary'; id: string }
-    | { name: 'entry'; entry: HangSession; isNew: boolean };
+    | { name: 'entry'; entry: HangSession; isNew: boolean }
+    | { name: 'block' };
 
   // The last user is kept so the app opens offline. It holds only the name.
   const LAST_USER = 'hangi-tracker:lastUser';
@@ -200,6 +203,39 @@
     clearTimeout(undoTimer);
     await store.saveSessions(restore);
     data.sessions = data.sessions.map((s) => restore.find((r) => r.id === s.id) ?? s);
+  }
+
+  // ---- blocks ----
+
+  /** First day for new sessions: today, or tomorrow when a session was logged today. */
+  function firstFreeDay(): string {
+    const today = toIsoDate(new Date());
+    const trainedToday = data?.hangSessions.some((h) => toIsoDate(new Date(h.datetime)) === today);
+    return trainedToday ? addDays(today, 1) : today;
+  }
+
+  const planning = $derived(
+    data && view.name === 'block' ? planNextBlock(data.plan, data.sessions, data.hangSessions, data.settings) : null,
+  );
+
+  const blockLine = $derived.by(() => {
+    if (!data) return '';
+    const next = nextSession(data.sessions);
+    const n = data.plan.number ?? 1;
+    if (!next) return `Block ${n} · complete`;
+    return `Block ${n} · ${next.week === 0 ? 'easy week' : `week ${next.week} of ${data.plan.weeks}`}`;
+  });
+
+  /** Starts a new block. Open sessions of the current block are removed; done and skipped ones stay. */
+  async function startBlock(b: BlockConfig) {
+    if (!data || !store) return;
+    const planId = crypto.randomUUID().slice(0, 8);
+    const g = generateBlock($state.snapshot(data.settings), b, planId, firstFreeDay(), (data.plan.number ?? 1) + 1);
+    const removed = openSessionIds($state.snapshot(data.sessions));
+    await store.replacePlan(g.plan, g.sessions, removed);
+    data.plan = g.plan;
+    data.sessions = [...data.sessions.filter((s) => !removed.includes(s.id)), ...g.sessions];
+    back();
   }
 
   function openExtra(type: 'full' | 'light') {
@@ -392,7 +428,7 @@
 
   // Sub-screens get one history entry, so the phone's back gesture leaves them.
   // The timer replaces the preview, and the summary replaces the timer.
-  const SUB = new Set<View['name']>(['preview', 'timer', 'summary', 'entry']);
+  const SUB = new Set<View['name']>(['preview', 'timer', 'summary', 'entry', 'block']);
   const parentOf = (v: View): View => (v.name === 'entry' ? { name: 'log' } : { name: 'home' });
 
   function go(v: View) {
@@ -472,6 +508,18 @@
   <main>
     <Summary session={summarySession} lastBodyweight={lastBodyweight()} onChange={updateHangSession} onDone={back} />
   </main>
+{:else if view.name === 'block' && planning}
+  <main>
+    <NewBlock
+      {planning}
+      settings={data.settings}
+      blockNumber={data.plan.number ?? 1}
+      from={firstFreeDay()}
+      onStart={startBlock}
+      onBack={back}
+      onSchedule={() => (scheduleOpen = true)}
+    />
+  </main>
 {:else if view.name === 'entry'}
   {@const v = view}
   <main>
@@ -504,6 +552,8 @@
         {syncLine}
         onChange={changeSettings}
         onSchedule={() => (scheduleOpen = true)}
+        onPlanBlock={() => go({ name: 'block' })}
+        {blockLine}
         onLogout={doLogout}
         onExport={exportData}
         onImport={importData}
@@ -525,6 +575,7 @@
         onOpen={(id) => go({ name: 'preview', id })}
         onExtra={openExtra}
         onSkip={skip}
+        onPlanBlock={() => go({ name: 'block' })}
         onSchedule={() => (scheduleOpen = true)}
       />
     {/if}

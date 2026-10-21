@@ -152,7 +152,7 @@
         <div class="meta">Today · {typeLabel(draft.type)} · outside the plan</div>
       {:else}
         <div class="meta">
-          {formatShortDate(draft.date)} · Week {draft.week} · {typeLabel(draft.type)}
+          {formatShortDate(draft.date)} · {draft.week === 0 ? 'Easy week' : `Week ${draft.week}`} · {typeLabel(draft.type)}
           <button class="inline-link" onclick={openDateSheet}>Change date</button>
           <button class="inline-link muted-link" onclick={() => (skipSheet = true)}>Skip</button>
         </div>
