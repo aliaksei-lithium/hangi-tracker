@@ -17,6 +17,7 @@
     onStart,
     onMove,
     onSchedule,
+    onSkip,
     extra = false,
   }: {
     session: PlannedSession;
@@ -29,9 +30,13 @@
     onMove: (date: string, shiftNext: boolean) => Promise<void>;
     /** Opens the weekly schedule. */
     onSchedule: () => void;
+    /** Skips this session (it stays in the plan as skipped). */
+    onSkip: () => Promise<void>;
     /** A one-off session outside the plan: edits are not saved, there is no date to change. */
     extra?: boolean;
   } = $props();
+
+  let skipSheet = $state(false);
 
   // Change date sheet.
   let dateSheet = $state(false);
@@ -149,6 +154,7 @@
         <div class="meta">
           {formatShortDate(draft.date)} · Week {draft.week} · {typeLabel(draft.type)}
           <button class="inline-link" onclick={openDateSheet}>Change date</button>
+          <button class="inline-link muted-link" onclick={() => (skipSheet = true)}>Skip</button>
         </div>
       {/if}
       <div class="titlebar">
@@ -262,6 +268,19 @@
   {/if}
 </div>
 
+{#if skipSheet}
+  <div class="scrim" role="presentation" onclick={(e) => e.target === e.currentTarget && (skipSheet = false)}>
+    <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="skip-title">
+      <h2 id="skip-title" class="display">Skip this session?</h2>
+      <p class="muted small">{formatShortDate(session.date)} · {typeLabel(session.type)} stays in the plan, marked as skipped. Unsaved changes here are dropped.</p>
+      <div class="sheet-actions">
+        <button class="btn btn-secondary" onclick={() => (skipSheet = false)}>Cancel</button>
+        <button class="btn btn-primary" onclick={onSkip}>Skip</button>
+      </div>
+    </div>
+  </div>
+{/if}
+
 {#if dateSheet}
   <div class="scrim" role="presentation" onclick={(e) => e.target === e.currentTarget && (dateSheet = false)}>
     <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="date-title">
@@ -304,6 +323,7 @@
   .content { flex: 1; padding: 0 var(--sp-5) var(--sp-6); display: flex; flex-direction: column; gap: var(--sp-4); }
   .head { display: flex; flex-direction: column; gap: 2px; }
   .meta { font-size: var(--fs-sm); color: var(--muted); display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
+  .muted-link { color: var(--muted) !important; font-weight: 400 !important; text-decoration: underline; text-underline-offset: 3px; }
   .inline-link { border: 0; background: transparent; padding: 0; min-height: 32px; color: var(--accent); font-weight: 600; font-size: var(--fs-sm); }
   .sheet p { margin: 0; }
   .schedule-link { padding: 0; align-self: flex-start; }

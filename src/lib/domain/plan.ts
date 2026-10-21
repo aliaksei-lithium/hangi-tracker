@@ -410,3 +410,14 @@ export function adoptPlanEdits(sessions: PlannedSession[]): PlannedSession[] {
       : s,
   );
 }
+
+/** Open sessions dated before `today`, oldest first. */
+export function missedSessions(sessions: PlannedSession[], today: string): PlannedSession[] {
+  return sortSessions(sessions).filter((s) => isOpen(s) && s.date < today);
+}
+
+/** Marks open sessions as skipped. They stay in the plan, shown as skipped. */
+export function skipSessions(sessions: PlannedSession[], ids: string[]): PlannedSession[] {
+  const skip = new Set(ids);
+  return sessions.map((s) => (skip.has(s.id) && isOpen(s) ? { ...s, status: 'skipped' } : s));
+}

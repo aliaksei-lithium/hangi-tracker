@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { User } from '../lib/api';
   import { daysBetween, formatShortDate, toIsoDate, WEEKDAY_NAMES, weekday } from '../lib/domain/dates';
-  import { nextSession, sessionSummary, tooSoonHours, upcomingSessions } from '../lib/domain/plan';
+  import { missedSessions, nextSession, sessionSummary, tooSoonHours, upcomingSessions } from '../lib/domain/plan';
   import type { HangSession, Plan, PlannedSession, Settings } from '../lib/domain/types';
   import { greeting } from '../lib/greeting';
   import Frame from '../lib/ui/Frame.svelte';
@@ -22,6 +22,7 @@
     onSchedule,
     guest = false,
     onLeaveGuest,
+    onSkip,
   }: {
     user: User;
     plan: Plan;
@@ -35,9 +36,11 @@
     onSchedule: () => void;
     guest?: boolean;
     onLeaveGuest: () => void;
+    onSkip: (ids: string[]) => void;
   } = $props();
 
   let extraSheet = $state(false);
+
   const SHORT_DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   const scheduleText = $derived(
     [...settings.schedule.days]
@@ -55,6 +58,22 @@
 
   const next = $derived(nextSession(sessions));
   const upcoming = $derived(upcomingSessions(sessions, 2));
+
+  // Skip sheet: the next session, and optionally every other missed session.
+  let skipSheet = $state(false);
+  let skipAllMissed = $state(true);
+  const missed = $derived(missedSessions(sessions, toIsoDate(now)));
+  const otherMissed = $derived(missed.filter((s) => s.id !== next?.id));
+  const afterSkip = $derived.by(() => {
+    if (!next) return null;
+    const skipped = new Set([next.id, ...(skipAllMissed ? otherMissed.map((s) => s.id) : [])]);
+    return nextSession(sessions.filter((s) => !skipped.has(s.id)));
+  });
+  function confirmSkip() {
+    if (!next) return;
+    onSkip([next.id, ...(skipAllMissed ? otherMissed.map((s) => s.id) : [])]);
+    skipSheet = false;
+  }
   const soon = $derived(tooSoonHours(hangSessions, settings.schedule.minGapHours, now));
   const lastDone = $derived(
     [...hangSessions].sort((a, b) => b.datetime.localeCompare(a.datetime))[0] ?? null,
@@ -118,6 +137,7 @@
         </button>
         <button class="btn btn-secondary" onclick={() => onOpen(next.id)}>Edit</button>
       </div>
+      <button class="skip-link" onclick={() => { skipAllMissed = true; skipSheet = true; }}>Skip this session</button>
     </Frame>
   {/if}
 
@@ -153,6 +173,26 @@
     {/if}
   </div>
 </div>
+
+{#if skipSheet && next}
+  <div class="scrim" role="presentation" onclick={(e) => e.target === e.currentTarget && (skipSheet = false)}>
+    <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="skip-title">
+      <h2 id="skip-title" class="display">Skip {formatShortDate(next.date)} · {typeLabel(next.type)}?</h2>
+      <p class="muted">It stays in the plan, marked as skipped. The plan does not move.</p>
+      {#if otherMissed.length}
+        <label class="check">
+          <input type="checkbox" bind:checked={skipAllMissed} />
+          Also skip {otherMissed.length} other missed session{otherMissed.length === 1 ? '' : 's'}
+        </label>
+      {/if}
+      <p class="muted">{afterSkip ? `The next session will be ${formatShortDate(afterSkip.date)} · ${typeLabel(afterSkip.type)}.` : 'There are no more sessions in this plan.'}</p>
+      <div class="sheet-actions">
+        <button class="btn btn-secondary" onclick={() => (skipSheet = false)}>Cancel</button>
+        <button class="btn btn-primary" onclick={confirmSkip}>Skip</button>
+      </div>
+    </div>
+  </div>
+{/if}
 
 {#if extraSheet}
   <div class="scrim" role="presentation" onclick={(e) => e.target === e.currentTarget && (extraSheet = false)}>
@@ -210,5 +250,8 @@
   .sheet h2 { margin: 0; font-size: 28px; }
   .sheet p { margin: 0; }
   .sheet-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .skip-link { align-self: center; min-height: 40px; border: 0; background: transparent; color: var(--muted); font-size: var(--fs-sm); text-decoration: underline; text-underline-offset: 3px; padding: 0 8px; margin-top: -4px; }
+  .check { min-height: 48px; display: flex; align-items: center; gap: 12px; cursor: pointer; }
+  .check input { width: 22px; height: 22px; margin: 0; accent-color: var(--accent); }
   .done { display: flex; align-items: center; gap: 6px; }
 </style>

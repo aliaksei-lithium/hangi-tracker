@@ -2,7 +2,7 @@
   import { fetchMe, logout, NetworkError, type User } from './lib/api';
   import { addDays, toIsoDate } from './lib/domain/dates';
   import { newEntry, plannedChangesOnDelete, plannedChangesOnSave } from './lib/domain/log';
-  import { nextSession, resetToPlan, saveEdit } from './lib/domain/plan';
+  import { nextSession, resetToPlan, saveEdit, skipSessions } from './lib/domain/plan';
   import type { EditScope, HangSession, PlannedSession, ScheduleDay, Settings } from './lib/domain/types';
   import ScheduleSheet from './lib/ui/ScheduleSheet.svelte';
   import { Store, type Snapshot } from './lib/store/db';
@@ -170,6 +170,36 @@
     const after = moveSession(before, id, date, shiftNext);
     await store.saveSessions(after.filter((x, i) => x !== before[i]));
     data.sessions = after;
+  }
+
+  // Skipping, with a short Undo.
+  let undoSkip = $state<{ before: PlannedSession[]; text: string } | null>(null);
+  let undoTimer: ReturnType<typeof setTimeout> | undefined;
+
+  async function skip(ids: string[]) {
+    if (!data || !store) return;
+    const before = $state.snapshot(data.sessions);
+    const after = skipSessions(before, ids);
+    const changed = after.filter((x, i) => x !== before[i]);
+    if (!changed.length) return;
+    await store.saveSessions(changed);
+    data.sessions = after;
+    undoSkip = {
+      before: before.filter((x) => changed.some((c) => c.id === x.id)),
+      text: changed.length === 1 ? 'Session skipped.' : `${changed.length} sessions skipped.`,
+    };
+    clearTimeout(undoTimer);
+    undoTimer = setTimeout(() => (undoSkip = null), 10_000);
+  }
+
+  async function undoLastSkip() {
+    if (!data || !store || !undoSkip) return;
+    // A plain copy: IndexedDB cannot store Svelte's reactive proxies.
+    const restore = $state.snapshot(undoSkip.before);
+    undoSkip = null;
+    clearTimeout(undoTimer);
+    await store.saveSessions(restore);
+    data.sessions = data.sessions.map((s) => restore.find((r) => r.id === s.id) ?? s);
   }
 
   function openExtra(type: 'full' | 'light') {
@@ -428,6 +458,10 @@
       extra={isExtra}
       onMove={(date, shift) => moveDate(current.id, date, shift)}
       onSchedule={() => (scheduleOpen = true)}
+      onSkip={async () => {
+        await skip([current.id]);
+        back();
+      }}
       onBack={back}
       onStart={(s) => go({ name: 'timer', id: s.id, extra: isExtra ? s : undefined })}
     />
@@ -490,6 +524,7 @@
         {onSuggestion}
         onOpen={(id) => go({ name: 'preview', id })}
         onExtra={openExtra}
+        onSkip={skip}
         onSchedule={() => (scheduleOpen = true)}
       />
     {/if}
@@ -508,6 +543,13 @@
       Settings
     </button>
   </nav>
+{/if}
+
+{#if undoSkip}
+  <div class="toast" role="status">
+    <span>{undoSkip.text}</span>
+    <button onclick={undoLastSkip}>Undo</button>
+  </div>
 {/if}
 
 {#if scheduleOpen && data}
@@ -551,5 +593,22 @@
     color: var(--muted);
     font-size: var(--fs-xs);
   }
+  .toast {
+    position: fixed;
+    left: 50%;
+    bottom: calc(76px + env(safe-area-inset-bottom));
+    transform: translateX(-50%);
+    width: min(520px, calc(100% - 32px));
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 10px 10px 16px;
+    background: var(--text);
+    color: var(--bg);
+    box-shadow: var(--shadow-3);
+    z-index: 15;
+  }
+  .toast button { min-height: 40px; padding: 0 12px; border: 0; background: transparent; color: var(--accent-tint); font-weight: 700; }
   nav button.active { color: var(--accent); font-weight: 600; box-shadow: inset 0 2px 0 var(--accent); }
 </style>

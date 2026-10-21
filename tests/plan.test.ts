@@ -14,6 +14,8 @@ import {
   upcomingSessions,
   withDefaults,
   adoptPlanEdits,
+  missedSessions,
+  skipSessions,
 } from '../src/lib/domain/plan';
 import type { PlannedSession } from '../src/lib/domain/types';
 
@@ -272,5 +274,17 @@ describe('adoptPlanEdits', () => {
   it('does nothing twice', () => {
     const once = adoptPlanEdits(edited);
     expect(adoptPlanEdits(once)).toBe(once);
+  });
+});
+
+describe('skipping', () => {
+  it('finds missed sessions and skips only open ones', () => {
+    const withDone = sessions.map((s) => (s.id === 'p1:w1:full' ? { ...s, status: 'done' as const } : s));
+    const missed = missedSessions(withDone, '2026-10-27');
+    expect(missed.map((s) => s.id)).toEqual(['p1:w1:light', 'p1:w2:full']);
+    const out = skipSessions(withDone, ['p1:w1:full', 'p1:w1:light']);
+    expect(out.find((s) => s.id === 'p1:w1:full')!.status).toBe('done'); // done stays done
+    expect(out.find((s) => s.id === 'p1:w1:light')!.status).toBe('skipped');
+    expect(nextSession(out)?.id).toBe('p1:w2:full');
   });
 });
