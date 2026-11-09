@@ -31,11 +31,11 @@ Things the doc leaves to the developer, decided here:
 
 - IndexedDB library: the tiny `idb` wrapper, not Dexie. The data is small and the
   schema is five object stores. Dexie adds little here.
-- Sound: Web Audio API with a new `AudioContext` on each Start tap, beeps
-  scheduled on the audio clock, audio session type "playback" so the iOS
-  ring/silent switch does not mute them. No audio element and no Media Session
-  metadata, so iOS does not show the app as playing media. Because of that iOS
-  stops the beeps when the screen is locked; the wake lock keeps the screen on.
+- Sound: Web Audio API with a new `AudioContext` on each Start tap, beeps and
+  recorded voice prompts scheduled on the audio clock (no speech synthesis).
+  Audio session type "transient": the sound mixes with music and iOS does not
+  show the app as playing media, but the ring/silent switch mutes it. iOS stops
+  the sound when the screen is locked; the wake lock keeps the screen on.
   Vibration API on Android.
 - Plan storage: a generated list of planned sessions (as the doc's data model
   says), plus the rules in settings. A "regenerate from week N" function

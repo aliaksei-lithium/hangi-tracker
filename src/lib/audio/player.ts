@@ -6,12 +6,13 @@
 // them and schedules again.
 //
 // iOS notes:
-// - There is no <audio> element and no Media Session metadata on purpose: either one
-//   makes iOS list the app as playing media (lock screen and Control Center player).
-//   The price is that iOS stops the beeps when the screen is locked or the app is in
-//   the background; the screen wake lock keeps the timer in front instead.
-// - The audio session type is "playback", so the beeps also play with the ring/silent
-//   switch set to silent. Web Audio alone is muted by that switch.
+// - The audio session type is "transient": short sounds that mix with music from
+//   other apps, and iOS does not show the app as playing media (lock screen and
+//   Control Center player). The price: the ring/silent switch mutes the sound. The
+//   "playback" type plays on silent, but pauses other audio and shows that player.
+// - There is no <audio> element, for the same reason. iOS stops the sound when the
+//   screen is locked or the app is in the background; the screen wake lock keeps the
+//   timer in front instead.
 // - An installed app lives for days, and iOS interrupts its AudioContext whenever the
 //   app goes to the background. An old context often stays silent even after
 //   `resume()`, so every unlock makes a new one.
@@ -78,7 +79,7 @@ function loadVoices(ctx: AudioContext): Promise<void> {
 
 type AudioSessionType = 'auto' | 'playback' | 'transient' | 'transient-solo' | 'ambient' | 'play-and-record';
 
-/** Safari 16.4+. Without it the ring/silent switch mutes Web Audio. */
+/** Safari 16.4+. */
 function setAudioSession(type: AudioSessionType): void {
   const session = (navigator as Navigator & { audioSession?: { type: AudioSessionType } }).audioSession;
   if (!session) return;
@@ -104,7 +105,7 @@ class Player {
 
   /** Must run inside a user tap (Start), or browsers keep audio locked. */
   unlock(): void {
-    setAudioSession('playback');
+    setAudioSession('transient');
     this.onRunning = null; // set it again after this call
     this.close();
     const ctx = new AudioContext();
@@ -167,7 +168,15 @@ class Player {
     // A new context starts to run a moment after the tap.
     this.onRunning = () => {
       this.onRunning = null;
-      void loadVoices(this.ctx!).then(() => this.schedule(sample, 0, { beeps: true, voice }));
+      const ctx = this.ctx!;
+      void loadVoices(ctx).then(() => {
+        if (this.ctx !== ctx) return;
+        this.schedule(sample, 0, { beeps: true, voice });
+        // Release audio after the last signal.
+        setTimeout(() => {
+          if (this.ctx === ctx) this.stop();
+        }, 9500);
+      });
     };
     if (this.ready) this.onRunning();
   }
