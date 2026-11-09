@@ -128,6 +128,7 @@
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M4 9v6h4l5 4V5L8 9z"></path><path d="M16 9a4 4 0 0 1 0 6"></path></svg>
       Play test signals
     </button>
+    <p class="note">On iPhone, turn the ringer on: silent mode mutes beeps and voice.</p>
   </section>
 
   <section>
@@ -283,6 +284,7 @@
   /* The row text already names the stepper. */
   .step :global(.label) { display: none; }
   .test { height: 52px; font-size: 20px; }
+  .note { margin: 0; font-size: 13px; color: var(--muted); }
   .change { height: 44px; font-size: 18px; flex: none; }
   .select { height: 48px; min-width: 140px; padding: 0 10px; background: var(--surface); border: 1px solid var(--divider); border-radius: var(--r-1); font: inherit; font-size: 15px; color: var(--text); }
   .segmented { display: grid; grid-template-columns: repeat(3, 1fr); border: 1px solid var(--divider); }
