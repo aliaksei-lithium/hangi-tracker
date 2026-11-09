@@ -72,19 +72,19 @@ describe('calendar', () => {
     expect(mark('2026-10-13')).toBeNull();
     expect(days.find((x) => x.date === '2026-10-27')?.today).toBe(true);
   });
-  it('marks past open sessions as missed', () => {
+  it('marks past open sessions as skipped', () => {
     const days = calendar('2026-11', planned, log, '2026-11-10');
-    expect(days.find((x) => x.date === '2026-11-02')?.mark).toBe('missed');
+    expect(days.find((x) => x.date === '2026-11-02')?.mark).toBe('skipped');
   });
 });
 
 describe('planVsActual', () => {
-  it('lists done, skipped, missed and modified sessions, newest first', () => {
+  it('lists done, skipped and modified sessions, newest first', () => {
     const p = planned.map((s) => (s.id === 'p1:w2:light' ? { ...s, status: 'skipped' as const } : s.id === 'p1:w4:full' ? { ...s, status: 'modified' as const } : s));
     const rows = planVsActual(p, log, '2026-11-03');
     expect(rows.map((r) => `${r.id}:${r.status}`)).toEqual([
       'p1:w4:full:modified',
-      'p1:w3:full:missed',
+      'p1:w3:full:skipped',
       'p1:w2:light:skipped',
       'p1:w2:full:done',
       'p1:w1:light:done',

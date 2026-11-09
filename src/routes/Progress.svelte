@@ -48,7 +48,7 @@
     month = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
   }
 
-  const STATUS = { done: 'Done', skipped: 'Skipped', missed: 'Missed', modified: 'Modified' } as const;
+  const STATUS = { done: 'Done', skipped: 'Skipped', modified: 'Modified' } as const;
 
   function rowDetail(r: (typeof rows)[number]): string {
     const p = r.planned;
@@ -154,7 +154,6 @@
       <span><i class="swatch fill"></i>Done</span>
       <span><i class="swatch dashed"></i>Planned</span>
       <span><s>1</s> Skipped</span>
-      <span><i class="swatch missed"></i>Missed</span>
     </div>
   </section>
 
@@ -218,7 +217,6 @@
   .swatch.fill { background: var(--accent); }
   .swatch.outline { border: 1px solid var(--accent); }
   .swatch.dashed { border: 1px dashed var(--muted); }
-  .swatch.missed { border: 1px solid var(--warning); background: var(--warning-tint); }
   .key { width: 18px; display: inline-block; }
   .nav { display: flex; gap: 4px; }
   .nav button { width: 44px; height: 44px; border: 0; background: transparent; color: var(--muted); font-size: 22px; }
@@ -230,7 +228,6 @@
   .day.done { background: var(--accent); color: var(--on-accent); font-weight: 600; }
   .day.planned { border: 1px dashed var(--muted); }
   .day.skipped { text-decoration: line-through; color: var(--muted); }
-  .day.missed { border: 1px solid var(--warning); background: var(--warning-tint); color: var(--warning); }
   .list { display: flex; flex-direction: column; }
   .pva { min-height: 56px; display: flex; align-items: center; justify-content: space-between; gap: 12px; border-bottom: 1px solid var(--divider); }
   .col { display: flex; flex-direction: column; }
@@ -239,7 +236,6 @@
   .status.done { border-color: var(--success); color: var(--success); }
   .status.modified { border-color: var(--accent); background: var(--accent-tint); }
   .status.skipped { color: var(--muted); }
-  .status.missed { border-color: var(--warning); color: var(--warning); background: var(--warning-tint); }
   table { width: 100%; border-collapse: collapse; font-size: 15px; font-variant-numeric: tabular-nums; }
   th, td { padding-right: 12px; }
   th { text-align: left; font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); font-weight: 600; padding: 8px 0; border-bottom: 1px solid var(--divider); }

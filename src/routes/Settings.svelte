@@ -124,7 +124,7 @@
         <Switch bind:checked={draft.protocol.warmupOn} label="Warm-up by default" />
       </div>
     </div>
-    <button class="btn btn-secondary test" onclick={() => player.test()}>
+    <button class="btn btn-secondary test" onclick={() => player.test(draft.timer.voice)}>
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M4 9v6h4l5 4V5L8 9z"></path><path d="M16 9a4 4 0 0 1 0 6"></path></svg>
       Play test signals
     </button>

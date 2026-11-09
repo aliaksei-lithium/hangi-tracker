@@ -86,8 +86,13 @@ class Player {
       if (this.ctx === ctx && ctx.state === 'running') this.onRunning?.();
     });
     void ctx.resume().catch(() => {});
-    // An utterance started inside the tap unlocks speech on iOS.
-    if ('speechSynthesis' in window) speechSynthesis.speak(new SpeechSynthesisUtterance(''));
+    // An utterance started inside the tap unlocks speech on iOS. Not an empty one:
+    // iOS can leave that in the queue forever.
+    if ('speechSynthesis' in window) {
+      const u = new SpeechSynthesisUtterance(' ');
+      u.volume = 0;
+      speechSynthesis.speak(u);
+    }
   }
 
   private close(): void {
@@ -120,8 +125,8 @@ class Player {
     }
   }
 
-  /** Plays a short sample of every signal. */
-  test(): void {
+  /** Plays a short sample of every signal, and one voice prompt when `voice` is on. */
+  test(voice = false): void {
     const kinds: SignalKind[] = ['tick', 'tick', 'tick', 'go', 'stop', 'warn', 'done'];
     const play = () => this.schedule(kinds.map((kind, i) => ({ atMs: 300 + i * 1000, kind })), 0);
     this.unlock();
@@ -131,6 +136,7 @@ class Player {
       play();
     };
     if (this.ready) this.onRunning();
+    if (voice) this.speak('get_ready');
   }
 
   private tone(at: number, freq: number, dur: number): void {
@@ -166,7 +172,8 @@ class Player {
 
   speak(cue: keyof typeof VOICE_TEXT): void {
     if (!('speechSynthesis' in window)) return;
-    speechSynthesis.cancel();
+    // Safari can drop an utterance that follows a `cancel()` with nothing to cancel.
+    if (speechSynthesis.speaking || speechSynthesis.pending) speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(VOICE_TEXT[cue]);
     u.lang = 'en-US';
     u.rate = 1.05;

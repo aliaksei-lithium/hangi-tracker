@@ -95,7 +95,7 @@ export function records(all: HangSession[], edges: readonly number[]): { edges: 
   return { edges: out, volume };
 }
 
-export type DayMark = 'done' | 'planned' | 'skipped' | 'missed' | null;
+export type DayMark = 'done' | 'planned' | 'skipped' | null;
 
 export interface CalendarDay {
   date: string;
@@ -120,14 +120,14 @@ export function calendar(month: string, planned: PlannedSession[], log: HangSess
     if (doneDates.has(date)) mark = 'done';
     else {
       const p = planned.find((x) => x.date === date);
-      if (p?.status === 'skipped') mark = 'skipped';
-      else if (p && p.status !== 'done') mark = date < today ? 'missed' : 'planned';
+      // A past session that is still open counts as skipped.
+      if (p && p.status !== 'done') mark = p.status === 'skipped' || date < today ? 'skipped' : 'planned';
     }
     return { date, day: Number(date.slice(8)), inMonth: date.startsWith(month), mark, today: date === today };
   });
 }
 
-export type PlanStatus = 'done' | 'skipped' | 'modified' | 'missed';
+export type PlanStatus = 'done' | 'skipped' | 'modified';
 
 export interface PlanRow {
   id: string;
@@ -138,8 +138,8 @@ export interface PlanRow {
 }
 
 /**
- * Plan vs actual, newest first: sessions that are done, skipped, missed (in the past
- * and still open) or changed from the plan.
+ * Plan vs actual, newest first: sessions that are done, skipped (also the ones in the
+ * past that are still open) or changed from the plan.
  */
 export function planVsActual(planned: PlannedSession[], log: HangSession[], today: string): PlanRow[] {
   const rows: PlanRow[] = [];
@@ -147,8 +147,7 @@ export function planVsActual(planned: PlannedSession[], log: HangSession[], toda
     const entry = log.find((s) => s.plannedId === p.id) ?? null;
     let status: PlanStatus | null = null;
     if (p.status === 'done' || entry) status = 'done';
-    else if (p.status === 'skipped') status = 'skipped';
-    else if (p.date < today) status = 'missed';
+    else if (p.status === 'skipped' || p.date < today) status = 'skipped';
     else if (p.status === 'modified') status = 'modified';
     if (status) rows.push({ id: p.id, date: entry ? localDate(entry.datetime) : p.date, planned: p, entry, status });
   }
