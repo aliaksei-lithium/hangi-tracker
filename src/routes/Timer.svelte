@@ -63,8 +63,9 @@
   const allSignals = $derived(signals(timer.segments));
 
   function syncSound() {
-    if (settings.timer.beeps && !isPaused(timer) && !positionAt(timer, Date.now()).done) {
-      player.schedule(allSignals, elapsedMs(timer, Date.now()));
+    const { beeps, voice } = settings.timer;
+    if ((beeps || voice) && !isPaused(timer) && !positionAt(timer, Date.now()).done) {
+      player.schedule(allSignals, elapsedMs(timer, Date.now()), { beeps, voice });
     } else {
       player.cancel();
     }
@@ -75,10 +76,9 @@
   function frame() {
     now = Date.now();
     const elapsed = elapsedMs(timer, now);
-    // Voice and vibration need the page to be visible; skip anything older than 1.5 s.
+    // Vibration needs the page to be visible; skip anything older than 1.5 s.
     for (const s of allSignals) {
       if (s.atMs <= lastElapsed || s.atMs > elapsed || elapsed - s.atMs > 1500) continue;
-      if (s.kind === 'voice' && s.voice && settings.timer.voice) player.speak(s.voice);
       if (s.kind === 'go') vibrate(400);
       if (s.kind === 'stop') vibrate([150, 80, 150]);
       if (s.kind === 'warn') vibrate(80);
@@ -103,7 +103,7 @@
   // Sound can be locked here (the app was reopened on this screen, or iOS interrupted
   // it). Any tap unlocks it again.
   function onTap() {
-    if (!settings.timer.beeps || player.ready) return;
+    if (!(settings.timer.beeps || settings.timer.voice) || player.ready) return;
     player.unlock();
     player.onRunning = syncSound;
   }

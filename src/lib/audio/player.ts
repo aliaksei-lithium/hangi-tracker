@@ -1,6 +1,6 @@
 // Sound for the timer.
 //
-// Beeps are scheduled ahead on the Web Audio clock for the whole rest of the session,
+// Beeps and voice prompts are scheduled ahead on the Web Audio clock for the whole rest of the session,
 // so they play on time even when the page's JavaScript is throttled (tab in the
 // background, screen locked). Any change to the timer (pause, +10 s, skip) cancels
 // them and schedules again.
@@ -16,7 +16,11 @@
 //   app goes to the background. An old context often stays silent even after
 //   `resume()`, so every unlock makes a new one.
 
-import type { Signal, SignalKind } from '../domain/timer';
+import type { Signal, SignalKind, VoiceCue } from '../domain/timer';
+import getReadyUrl from './voice/get_ready.wav';
+import hangUrl from './voice/hang.wav';
+import nextSetUrl from './voice/next_set.wav';
+import restUrl from './voice/rest.wav';
 
 type Tone = { freq: number; at: number; dur: number };
 
@@ -39,12 +43,38 @@ const TONES: Record<SignalKind, Tone[]> = {
   ],
 };
 
-const VOICE_TEXT = {
-  get_ready: 'Get ready',
-  hang: 'Hang',
-  rest: 'Rest',
-  next_set: 'Next set',
-} as const;
+// Recorded prompts, played through Web Audio like the beeps. Speech synthesis is not
+// used: on iOS it interrupts the AudioContext (the beeps stop) and is often silent in
+// an installed app.
+const VOICE_URL: Record<VoiceCue, string> = {
+  get_ready: getReadyUrl,
+  hang: hangUrl,
+  rest: restUrl,
+  next_set: nextSetUrl,
+};
+
+let voices: Partial<Record<VoiceCue, AudioBuffer>> = {};
+let voicesLoading: Promise<void> | null = null;
+let voicesLoaded = false;
+
+/** Loads the prompts once. Never rejects: without them the beeps still play. */
+function loadVoices(ctx: AudioContext): Promise<void> {
+  voicesLoading ??= Promise.all(
+    (Object.keys(VOICE_URL) as VoiceCue[]).map(async (cue) => {
+      const data = await (await fetch(VOICE_URL[cue])).arrayBuffer();
+      voices[cue] = await ctx.decodeAudioData(data);
+    }),
+  ).then(
+    () => {
+      voicesLoaded = true;
+    },
+    () => {
+      voices = {};
+      voicesLoading = null; // try again on the next unlock
+    },
+  );
+  return voicesLoading;
+}
 
 type AudioSessionType = 'auto' | 'playback' | 'transient' | 'transient-solo' | 'ambient' | 'play-and-record';
 
@@ -62,7 +92,7 @@ function setAudioSession(type: AudioSessionType): void {
 class Player {
   private ctx: AudioContext | null = null;
   private gain: GainNode | null = null;
-  private nodes: OscillatorNode[] = [];
+  private nodes: AudioScheduledSourceNode[] = [];
 
   /** Called when sound starts to run (after an unlock or an interruption). `unlock` clears it. */
   onRunning: (() => void) | null = null;
@@ -86,13 +116,11 @@ class Player {
       if (this.ctx === ctx && ctx.state === 'running') this.onRunning?.();
     });
     void ctx.resume().catch(() => {});
-    // An utterance started inside the tap unlocks speech on iOS. Not an empty one:
-    // iOS can leave that in the queue forever.
-    if ('speechSynthesis' in window) {
-      const u = new SpeechSynthesisUtterance(' ');
-      u.volume = 0;
-      speechSynthesis.speak(u);
-    }
+    // Prompts that finish loading after the first schedule are added by a new one.
+    const loaded = voicesLoaded;
+    void loadVoices(ctx).then(() => {
+      if (!loaded && this.ctx === ctx && ctx.state === 'running') this.onRunning?.();
+    });
   }
 
   private close(): void {
@@ -107,7 +135,7 @@ class Player {
    * Schedules all signals after `nowMs` (session time). `signals` holds session times;
    * the Web Audio clock is mapped to session time at this moment.
    */
-  schedule(signals: Signal[], nowMs: number): void {
+  schedule(signals: Signal[], nowMs: number, on = { beeps: true, voice: true }): void {
     this.cancel();
     const ctx = this.ctx;
     if (!ctx || !this.gain) return;
@@ -119,24 +147,40 @@ class Player {
     }
     const base = ctx.currentTime;
     for (const s of signals) {
-      if (s.kind === 'voice' || s.atMs < nowMs) continue;
+      if (s.atMs < nowMs) continue;
       const t0 = base + (s.atMs - nowMs) / 1000;
-      for (const tone of TONES[s.kind]) this.tone(t0 + tone.at, tone.freq, tone.dur);
+      if (s.kind === 'voice') {
+        const buffer = s.voice && voices[s.voice];
+        if (on.voice && buffer) this.clip(t0, buffer);
+      } else if (on.beeps) {
+        for (const tone of TONES[s.kind]) this.tone(t0 + tone.at, tone.freq, tone.dur);
+      }
     }
   }
 
-  /** Plays a short sample of every signal, and one voice prompt when `voice` is on. */
+  /** Plays a short sample of every signal, with one voice prompt when `voice` is on. */
   test(voice = false): void {
+    const sample: Signal[] = [{ atMs: 300, kind: 'voice', voice: 'get_ready' }];
     const kinds: SignalKind[] = ['tick', 'tick', 'tick', 'go', 'stop', 'warn', 'done'];
-    const play = () => this.schedule(kinds.map((kind, i) => ({ atMs: 300 + i * 1000, kind })), 0);
+    kinds.forEach((kind, i) => sample.push({ atMs: 1500 + i * 1000, kind }));
     this.unlock();
     // A new context starts to run a moment after the tap.
     this.onRunning = () => {
       this.onRunning = null;
-      play();
+      void loadVoices(this.ctx!).then(() => this.schedule(sample, 0, { beeps: true, voice }));
     };
     if (this.ready) this.onRunning();
-    if (voice) this.speak('get_ready');
+  }
+
+  private clip(at: number, buffer: AudioBuffer): void {
+    const src = this.ctx!.createBufferSource();
+    src.buffer = buffer;
+    src.connect(this.ctx!.destination);
+    src.start(at);
+    src.onended = () => {
+      this.nodes = this.nodes.filter((n) => n !== src);
+    };
+    this.nodes.push(src);
   }
 
   private tone(at: number, freq: number, dur: number): void {
@@ -170,21 +214,10 @@ class Player {
     this.nodes = [];
   }
 
-  speak(cue: keyof typeof VOICE_TEXT): void {
-    if (!('speechSynthesis' in window)) return;
-    // Safari can drop an utterance that follows a `cancel()` with nothing to cancel.
-    if (speechSynthesis.speaking || speechSynthesis.pending) speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(VOICE_TEXT[cue]);
-    u.lang = 'en-US';
-    u.rate = 1.05;
-    speechSynthesis.speak(u);
-  }
-
   /** Stops everything after the session. */
   stop(): void {
     this.onRunning = null;
     this.close();
-    if ('speechSynthesis' in window) speechSynthesis.cancel();
     // Lets other apps' audio (music) take over again.
     setAudioSession('auto');
   }
