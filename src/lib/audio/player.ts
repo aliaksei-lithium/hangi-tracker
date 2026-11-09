@@ -3,9 +3,18 @@
 // Beeps are scheduled ahead on the Web Audio clock for the whole rest of the session,
 // so they play on time even when the page's JavaScript is throttled (tab in the
 // background, screen locked). Any change to the timer (pause, +10 s, skip) cancels
-// them and schedules again. A silent looping <audio> element keeps the audio session
-// alive on iOS while the screen is locked. This is "as far as the browser allows":
-// iOS may still suspend audio in some cases.
+// them and schedules again.
+//
+// iOS notes:
+// - There is no <audio> element and no Media Session metadata on purpose: either one
+//   makes iOS list the app as playing media (lock screen and Control Center player).
+//   The price is that iOS stops the beeps when the screen is locked or the app is in
+//   the background; the screen wake lock keeps the timer in front instead.
+// - The audio session type is "playback", so the beeps also play with the ring/silent
+//   switch set to silent. Web Audio alone is muted by that switch.
+// - An installed app lives for days, and iOS interrupts its AudioContext whenever the
+//   app goes to the background. An old context often stays silent even after
+//   `resume()`, so every unlock makes a new one.
 
 import type { Signal, SignalKind } from '../domain/timer';
 
@@ -37,53 +46,56 @@ const VOICE_TEXT = {
   next_set: 'Next set',
 } as const;
 
-/** A one-second silent WAV, built in memory (8 kHz, 8-bit mono). */
-function silentWavUrl(): string {
-  const samples = 8000;
-  const buf = new ArrayBuffer(44 + samples);
-  const v = new DataView(buf);
-  const str = (o: number, s: string) => [...s].forEach((c, i) => v.setUint8(o + i, c.charCodeAt(0)));
-  str(0, 'RIFF');
-  v.setUint32(4, 36 + samples, true);
-  str(8, 'WAVEfmt ');
-  v.setUint32(16, 16, true);
-  v.setUint16(20, 1, true); // PCM
-  v.setUint16(22, 1, true); // mono
-  v.setUint32(24, 8000, true);
-  v.setUint32(28, 8000, true);
-  v.setUint16(32, 1, true);
-  v.setUint16(34, 8, true);
-  str(36, 'data');
-  v.setUint32(40, samples, true);
-  for (let i = 0; i < samples; i++) v.setUint8(44 + i, 128); // 8-bit silence
-  return URL.createObjectURL(new Blob([buf], { type: 'audio/wav' }));
+type AudioSessionType = 'auto' | 'playback' | 'transient' | 'transient-solo' | 'ambient' | 'play-and-record';
+
+/** Safari 16.4+. Without it the ring/silent switch mutes Web Audio. */
+function setAudioSession(type: AudioSessionType): void {
+  const session = (navigator as Navigator & { audioSession?: { type: AudioSessionType } }).audioSession;
+  if (!session) return;
+  try {
+    session.type = type;
+  } catch {
+    // not supported in this version
+  }
 }
 
 class Player {
   private ctx: AudioContext | null = null;
   private gain: GainNode | null = null;
   private nodes: OscillatorNode[] = [];
-  private keepAlive: HTMLAudioElement | null = null;
+
+  /** Called when sound starts to run (after an unlock or an interruption). `unlock` clears it. */
+  onRunning: (() => void) | null = null;
+
+  /** True when beeps can play now. */
+  get ready(): boolean {
+    return this.ctx?.state === 'running';
+  }
 
   /** Must run inside a user tap (Start), or browsers keep audio locked. */
   unlock(): void {
-    if (!this.ctx) {
-      this.ctx = new AudioContext();
-      this.gain = this.ctx.createGain();
-      this.gain.gain.value = 0.6;
-      this.gain.connect(this.ctx.destination);
-    }
-    void this.ctx.resume();
-    if (!this.keepAlive) {
-      this.keepAlive = new Audio(silentWavUrl());
-      this.keepAlive.loop = true;
-    }
-    void this.keepAlive.play().catch(() => {});
+    setAudioSession('playback');
+    this.onRunning = null; // set it again after this call
+    this.close();
+    const ctx = new AudioContext();
+    this.ctx = ctx;
+    this.gain = ctx.createGain();
+    this.gain.gain.value = 0.6;
+    this.gain.connect(ctx.destination);
+    ctx.addEventListener('statechange', () => {
+      if (this.ctx === ctx && ctx.state === 'running') this.onRunning?.();
+    });
+    void ctx.resume().catch(() => {});
     // An utterance started inside the tap unlocks speech on iOS.
     if ('speechSynthesis' in window) speechSynthesis.speak(new SpeechSynthesisUtterance(''));
-    if ('mediaSession' in navigator) {
-      navigator.mediaSession.metadata = new MediaMetadata({ title: 'Hangboard session', artist: 'Hangi Tracker' });
-    }
+  }
+
+  private close(): void {
+    this.cancel();
+    const ctx = this.ctx;
+    this.ctx = null;
+    this.gain = null;
+    if (ctx && ctx.state !== 'closed') void ctx.close().catch(() => {});
   }
 
   /**
@@ -94,6 +106,12 @@ class Player {
     this.cancel();
     const ctx = this.ctx;
     if (!ctx || !this.gain) return;
+    if (ctx.state !== 'running') {
+      // Suspended or interrupted (iOS): the audio clock stands still, so nothing
+      // scheduled now would play on time. `onRunning` schedules again.
+      void ctx.resume().catch(() => {});
+      return;
+    }
     const base = ctx.currentTime;
     for (const s of signals) {
       if (s.kind === 'voice' || s.atMs < nowMs) continue;
@@ -104,9 +122,15 @@ class Player {
 
   /** Plays a short sample of every signal. */
   test(): void {
-    if (!this.ctx) this.unlock();
     const kinds: SignalKind[] = ['tick', 'tick', 'tick', 'go', 'stop', 'warn', 'done'];
-    this.schedule(kinds.map((kind, i) => ({ atMs: 300 + i * 1000, kind })), 0);
+    const play = () => this.schedule(kinds.map((kind, i) => ({ atMs: 300 + i * 1000, kind })), 0);
+    this.unlock();
+    // A new context starts to run a moment after the tap.
+    this.onRunning = () => {
+      this.onRunning = null;
+      play();
+    };
+    if (this.ready) this.onRunning();
   }
 
   private tone(at: number, freq: number, dur: number): void {
@@ -151,9 +175,11 @@ class Player {
 
   /** Stops everything after the session. */
   stop(): void {
-    this.cancel();
-    this.keepAlive?.pause();
+    this.onRunning = null;
+    this.close();
     if ('speechSynthesis' in window) speechSynthesis.cancel();
+    // Lets other apps' audio (music) take over again.
+    setAudioSession('auto');
   }
 }
 

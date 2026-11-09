@@ -100,7 +100,17 @@
     }
   }
 
+  // Sound can be locked here (the app was reopened on this screen, or iOS interrupted
+  // it). Any tap unlocks it again.
+  function onTap() {
+    if (!settings.timer.beeps || player.ready) return;
+    player.unlock();
+    player.onRunning = syncSound;
+  }
+
   onMount(() => {
+    player.onRunning = syncSound;
+    document.addEventListener('click', onTap, true);
     syncSound();
     if (settings.timer.wakeLock) void keepScreenOn().then((ok) => (screenOn = ok));
     document.addEventListener('visibilitychange', onVisibility);
@@ -110,6 +120,7 @@
   onDestroy(() => {
     cancelAnimationFrame(raf);
     document.removeEventListener('visibilitychange', onVisibility);
+    document.removeEventListener('click', onTap, true);
     player.stop();
     releaseScreen();
   });
